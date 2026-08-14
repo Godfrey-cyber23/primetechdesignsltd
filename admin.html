@@ -1,0 +1,1932 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Primetech OS | Company Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <style>
+        :root {
+            --bg: #06060a;
+            --surface: rgba(255, 255, 255, 0.04);
+            --surface-2: rgba(255, 255, 255, 0.08);
+            --border: rgba(255, 255, 255, 0.08);
+            --border-hover: rgba(255, 255, 255, 0.18);
+            --text: #ffffff;
+            --text-muted: #8b95a7;
+            --accent: #00D4FF;
+            --accent-2: #7B2FFF;
+            --gradient: linear-gradient(135deg, #00D4FF, #7B2FFF);
+            --success: #4ade80;
+            --danger: #f44336;
+            --warning: #fbbf24;
+            --chat-bg: #06060a;
+            --bubble-sent: linear-gradient(135deg, #00D4FF, #7B2FFF);
+            --bubble-received: rgba(255, 255, 255, 0.08);
+            --modal-bg: #0a0a12;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* === SIDEBAR & MAIN === */
+        .sidebar {
+            width: 260px;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            padding: 24px 16px;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+            z-index: 100;
+            transition: transform 0.3s ease;
+        }
+
+        .logo {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 32px;
+            padding: 0 8px;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: var(--gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            color: #fff;
+        }
+
+        .nav-section-title {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin: 20px 8px 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-radius: 8px;
+            color: var(--text-muted);
+            font-size: 0.88rem;
+            font-weight: 500;
+            margin-bottom: 4px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            font-family: inherit;
+            transition: all 0.3s;
+        }
+
+        .nav-item:hover {
+            background: var(--surface-2);
+            color: var(--text);
+        }
+
+        .nav-item.active {
+            background: var(--surface-2);
+            color: var(--accent);
+        }
+
+        .nav-item .badge {
+            margin-left: auto;
+            background: var(--accent);
+            color: #000;
+            font-size: 0.65rem;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-weight: 700;
+        }
+
+        .main-content {
+            flex: 1;
+            margin-left: 260px;
+            padding: 32px;
+            min-height: 100vh;
+            width: calc(100% - 260px);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .header h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.8rem;
+        }
+
+        .header p {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-top: 4px;
+        }
+
+        .view-link {
+            font-size: 0.8rem;
+            color: var(--accent);
+            text-decoration: none;
+            border: 1px solid var(--border);
+            padding: 8px 14px;
+            border-radius: 8px;
+            transition: 0.3s;
+        }
+
+        .view-link:hover {
+            border-color: var(--accent);
+        }
+
+        .view {
+            display: none;
+        }
+
+        .view.active {
+            display: block;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .grid-4 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+        }
+
+        .grid-2-equal {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+        }
+
+        .card-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stat-card {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .stat-trend {
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .stat-trend.up {
+            color: var(--success);
+        }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin-bottom: 6px;
+            color: var(--text-muted);
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 0.85rem;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: 1px solid var(--accent);
+        }
+
+        .btn-primary {
+            background: var(--gradient);
+            color: #fff;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: opacity 0.2s;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+        }
+
+        .btn-danger {
+            background: rgba(244, 67, 54, 0.1);
+            color: var(--danger);
+            border: 1px solid rgba(244, 67, 54, 0.2);
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .btn-success {
+            background: rgba(74, 222, 128, 0.1);
+            color: var(--success);
+            border: 1px solid rgba(74, 222, 128, 0.2);
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        /* Lists */
+        .list-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+
+        .list-item img {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+
+        .list-info {
+            flex: 1;
+        }
+
+        .list-info h4 {
+            font-size: 0.9rem;
+            margin-bottom: 2px;
+        }
+
+        .list-info p {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        /* === CHAT UI === */
+        .chat-container {
+            display: flex;
+            height: 75vh;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .chat-sidebar {
+            width: 300px;
+            min-width: 300px;
+            border-right: 1px solid var(--border);
+            overflow-y: auto;
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-sidebar-section {
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .sidebar-header {
+            padding: 0 16px 8px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 700;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .chat-user-list {
+            list-style: none;
+        }
+
+        .chat-user-item {
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: 0.2s;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .chat-user-item:hover,
+        .chat-user-item.active {
+            background: var(--surface);
+            color: var(--text);
+        }
+
+        .chat-user-item .hash {
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+
+        .chat-user-item img {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .presence-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            margin-left: auto;
+            border: 2px solid var(--bg);
+        }
+
+        .chat-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--chat-bg);
+            position: relative;
+        }
+
+        .chat-header {
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--surface);
+        }
+
+        .chat-header h4 {
+            font-size: 0.95rem;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .chat-header-actions {
+            display: flex;
+            gap: 15px;
+        }
+
+        .chat-header-actions button {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .chat-header-actions button:hover {
+            color: var(--accent);
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            background-image: radial-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        .message-wrapper {
+            max-width: 70%;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message-wrapper.sent {
+            align-self: flex-end;
+            align-items: flex-end;
+        }
+
+        .message-wrapper.received {
+            align-self: flex-start;
+            align-items: flex-start;
+        }
+
+        .message-info {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-bottom: 3px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            padding: 0 4px;
+        }
+
+        .message {
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 0.88rem;
+            line-height: 1.5;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+            word-wrap: break-word;
+        }
+
+        .message-wrapper.sent .message {
+            background: var(--bubble-sent);
+            color: #fff;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message-wrapper.received .message {
+            background: var(--bubble-received);
+            color: var(--text);
+            border-bottom-left-radius: 4px;
+        }
+
+        .message img {
+            max-width: 100%;
+            border-radius: 8px;
+            margin-top: 6px;
+        }
+
+        .message-actions {
+            position: absolute;
+            top: -15px;
+            right: 10px;
+            background: var(--modal-bg);
+            border: 1px solid var(--border-hover);
+            border-radius: 6px;
+            display: none;
+            gap: 2px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+            z-index: 10;
+        }
+
+        .message-wrapper.sent .message-actions {
+            right: 10px;
+        }
+
+        .message-wrapper.received .message-actions {
+            left: 10px;
+            right: auto;
+        }
+
+        .message-wrapper:hover .message-actions {
+            display: flex;
+        }
+
+        .action-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            padding: 4px 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .action-btn:hover {
+            background: var(--surface-2);
+            color: var(--accent);
+        }
+
+        .reaction-bar {
+            display: none;
+            position: absolute;
+            bottom: -15px;
+            left: 10px;
+            background: var(--modal-bg);
+            border: 1px solid var(--border-hover);
+            border-radius: 20px;
+            padding: 2px 4px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            gap: 2px;
+        }
+
+        .message-wrapper.sent .reaction-bar {
+            right: 10px;
+            left: auto;
+        }
+
+        .message-wrapper:hover .reaction-bar {
+            display: flex;
+        }
+
+        .reaction-bar span {
+            cursor: pointer;
+            padding: 2px 4px;
+            font-size: 0.9rem;
+        }
+
+        .applied-reactions {
+            display: flex;
+            gap: 4px;
+            margin-top: 4px;
+            padding: 0 4px;
+            flex-wrap: wrap;
+        }
+
+        .reaction-pill {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1px 6px;
+            font-size: 0.7rem;
+            cursor: pointer;
+        }
+
+        .thread-reply-btn {
+            background: none;
+            border: none;
+            color: var(--accent);
+            font-size: 0.7rem;
+            margin-top: 4px;
+            padding: 0 4px;
+            cursor: pointer;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .chat-input-area {
+            padding: 12px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--bg);
+            position: relative;
+        }
+
+        .chat-input-tools {
+            display: flex;
+            gap: 8px;
+        }
+
+        .tool-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: 0.2s;
+            padding: 5px;
+        }
+
+        .tool-btn:hover {
+            color: var(--accent);
+        }
+
+        .chat-input-area input {
+            flex: 1;
+            padding: 10px 14px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            outline: none;
+        }
+
+        .chat-send-btn {
+            background: var(--bubble-sent);
+            border: none;
+            color: #fff;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .thread-panel {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 400px;
+            height: 100%;
+            background: var(--bg);
+            border-left: 1px solid var(--border);
+            z-index: 20;
+            display: none;
+            flex-direction: column;
+            box-shadow: -4px 0 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .thread-panel.active {
+            display: flex;
+        }
+
+        .thread-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--surface);
+        }
+
+        .thread-header h5 {
+            font-size: 0.9rem;
+        }
+
+        .thread-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+
+        .thread-messages {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .thread-input {
+            padding: 12px;
+            border-top: 1px solid var(--border);
+        }
+
+        .thread-input input {
+            width: 100%;
+            padding: 8px 12px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+        }
+
+        .typing-indicator {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            padding: 0 16px 8px;
+            height: 18px;
+            font-style: italic;
+        }
+
+        /* Call Modal */
+        .call-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 9999;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .call-modal.active {
+            display: flex;
+        }
+
+        .call-video-container {
+            width: 100%;
+            max-width: 800px;
+            height: 60vh;
+            background: #000;
+            border-radius: 16px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .call-video-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+
+        .call-info {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .call-controls {
+            margin-top: 30px;
+            display: flex;
+            gap: 20px;
+        }
+
+        .call-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2rem;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .call-btn.end {
+            background: var(--danger);
+            width: 60px;
+            height: 60px;
+        }
+
+        .call-btn.mute,
+        .call-btn.video {
+            background: var(--surface-2);
+        }
+
+        /* Mobile Hamburger & Overlay */
+        .menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--text);
+            font-size: 1.5rem;
+            cursor: pointer;
+            margin-right: 15px;
+        }
+
+        .overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 99;
+        }
+
+        .overlay.active {
+            display: block;
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--surface-2);
+            color: #fff;
+            padding: 12px 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border-hover);
+            z-index: 10000;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: 0.3s;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        /* CRM Table */
+        .crm-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .crm-table th {
+            text-align: left;
+            padding: 12px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .crm-table td {
+            padding: 12px;
+            font-size: 0.85rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .crm-table tr.unread {
+            background: rgba(0, 212, 255, 0.03);
+        }
+
+        .crm-table tr.unread td:first-child {
+            border-left: 3px solid var(--accent);
+        }
+
+        /* === RESPONSIVE === */
+        @media (max-width: 992px) {
+
+            .grid-2,
+            .grid-2-equal {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                z-index: 100;
+            }
+
+            .sidebar.active {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+                padding: 16px;
+            }
+
+            .menu-toggle {
+                display: block;
+            }
+
+            .header h1 {
+                font-size: 1.4rem;
+            }
+
+            .chat-container {
+                height: 80vh;
+            }
+
+            .chat-sidebar {
+                position: absolute;
+                top: 0;
+                left: 0;
+                height: 100%;
+                z-index: 10;
+                background: var(--bg);
+                transform: translateX(-100%);
+                transition: transform 0.3s;
+            }
+
+            .chat-sidebar.mobile-active {
+                transform: translateX(0);
+            }
+
+            .thread-panel {
+                width: 100%;
+            }
+
+            .message-wrapper {
+                max-width: 90%;
+            }
+
+            .crm-table {
+                font-size: 0.75rem;
+            }
+
+            .crm-table th,
+            .crm-table td {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="overlay" id="overlay" onclick="toggleSidebar(false)"></div>
+
+    <!-- === SIDEBAR === -->
+    <div class="sidebar" id="sidebar">
+        <div class="logo">
+            <div class="logo-icon"><i class="fas fa-bolt"></i></div>
+            Primetech OS
+        </div>
+        <button class="nav-item active" onclick="switchView('dashboard', this)"><i class="fas fa-tachometer-alt"></i>
+            Dashboard</button>
+        <div class="nav-section-title">Communication</div>
+        <button class="nav-item" onclick="switchView('clientMessages', this)"><i class="fas fa-envelope"></i> Client
+            Messages <span class="badge" id="leadBadge">0</span></button>
+        <button class="nav-item" onclick="switchView('teamChat', this)"><i class="fas fa-comments"></i> Team
+            Chat</button>
+        <div class="nav-section-title">Website Management</div>
+        <button class="nav-item" onclick="switchView('siteSettings', this)"><i class="fas fa-cog"></i> Site
+            Settings</button>
+        <button class="nav-item" onclick="switchView('portfolio', this)"><i class="fas fa-briefcase"></i> Portfolio
+            Manager</button>
+        <button class="nav-item" onclick="switchView('crm', this)"><i class="fas fa-users"></i> Leads /
+            Submissions</button>
+        <button class="nav-item" onclick="switchView('team', this)"><i class="fas fa-user-tie"></i> Team
+            Members</button>
+    </div>
+
+    <!-- === MAIN CONTENT === -->
+    <div class="main-content">
+        <div class="header">
+            <div style="display: flex; align-items: center;">
+                <button class="menu-toggle" onclick="toggleSidebar(true)"><i class="fas fa-bars"></i></button>
+                <div>
+                    <h1 id="pageTitle">Dashboard Overview</h1>
+                    <p id="pageSubtitle">Welcome back! Here's what's happening today.</p>
+                </div>
+            </div>
+            <a href="index.html" target="_blank" class="view-link"><i class="fas fa-external-link-alt"></i> View Live
+                Site</a>
+        </div>
+
+        <!-- DASHBOARD -->
+        <div id="dashboard" class="view active">
+            <div class="grid-4">
+                <div class="card stat-card">
+                    <div class="stat-icon" style="background: rgba(0, 212, 255, 0.1); color: var(--accent);"><i
+                            class="fas fa-eye"></i></div>
+                    <div class="stat-value" id="statPageViews">0</div>
+                    <div class="stat-label">Total Page Views</div>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-icon" style="background: rgba(123, 47, 255, 0.1); color: var(--accent-2);"><i
+                            class="fas fa-clock"></i></div>
+                    <div class="stat-value" id="statDuration">0s</div>
+                    <div class="stat-label">Avg. Session Duration</div>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-icon" style="background: rgba(74, 222, 128, 0.1); color: var(--success);"><i
+                            class="fas fa-user-plus"></i></div>
+                    <div class="stat-value" id="statLeads">0</div>
+                    <div class="stat-label">New Leads (Forms)</div>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-icon" style="background: rgba(244, 67, 54, 0.1); color: var(--danger);"><i
+                            class="fas fa-percentage"></i></div>
+                    <div class="stat-value" id="statBounce">0%</div>
+                    <div class="stat-label">Bounce Rate</div>
+                </div>
+            </div>
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-title">Website Traffic (Last 7 Days)</div><canvas id="trafficChart"
+                        height="120"></canvas>
+                </div>
+                <div class="card">
+                    <div class="card-title">Top Pages</div>
+                    <div id="topPagesList" style="display: flex; flex-direction: column; gap: 15px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CLIENT CHAT -->
+        <div id="clientMessages" class="view">
+            <!-- Chat HTML remains same, truncated for brevity in thought process, but fully present in output -->
+            <div class="card" style="padding: 0;">
+                <div class="chat-container">
+                    <div class="chat-sidebar" id="clientSidebar">
+                        <div class="chat-sidebar-section">
+                            <div class="sidebar-header"><span>Clients</span><i class="fas fa-chevron-down"></i></div>
+                            <ul class="chat-user-list">
+                                <li class="chat-user-item active"
+                                    onclick="selectChat('client', 'client_mulenga', 'Mrs. Mulenga', this)"><img
+                                        src="https://i.pravatar.cc/150?img=47">
+                                    <div>
+                                        <h4>Mrs. Mulenga</h4>
+                                    </div>
+                                    <div class="presence-dot"></div>
+                                </li>
+                                <li class="chat-user-item"
+                                    onclick="selectChat('client', 'client_chanda', 'John Chanda', this)"><img
+                                        src="https://i.pravatar.cc/150?img=12">
+                                    <div>
+                                        <h4>John Chanda</h4>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="chat-main">
+                        <div class="chat-header">
+                            <button class="menu-toggle" style="font-size: 1.2rem;"
+                                onclick="toggleChatSidebar('clientSidebar')"><i class="fas fa-bars"></i></button>
+                            <h4 id="clientChatHeader"><i class="fas fa-lock"
+                                    style="font-size:0.7rem; color:var(--text-muted);"></i> Mrs. Mulenga</h4>
+                            <div class="chat-header-actions">
+                                <button onclick="startCall('audio')"><i class="fas fa-phone"></i></button>
+                                <button onclick="startCall('video')"><i class="fas fa-video"></i></button>
+                            </div>
+                        </div>
+                        <div class="chat-messages" id="clientChatMessages"></div>
+                        <div class="typing-indicator" id="clientTyping"></div>
+                        <div class="chat-input-area">
+                            <div class="chat-input-tools">
+                                <button class="tool-btn" onclick="document.getElementById('fileInputClient').click()"><i
+                                        class="fas fa-paperclip"></i></button>
+                                <input type="file" id="fileInputClient" style="display:none"
+                                    onchange="handleFileUpload(event, 'client')">
+                            </div>
+                            <input type="text" id="clientChatInput" placeholder="Message Mrs. Mulenga..."
+                                oninput="handleTyping('client')" onkeypress="handleChatSend(event, 'client')">
+                            <button class="chat-send-btn" onclick="sendMessage('client')"><i
+                                    class="fas fa-paper-plane"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TEAM CHAT -->
+        <div id="teamChat" class="view">
+            <!-- Chat HTML remains same, truncated for brevity in thought process, but fully present in output -->
+            <div class="card" style="padding: 0;">
+                <div class="chat-container">
+                    <div class="chat-sidebar" id="teamSidebar">
+                        <div class="chat-sidebar-section">
+                            <div class="sidebar-header"><span>Channels</span><i class="fas fa-plus"
+                                    style="font-size:0.7rem;" onclick="addChannel()"></i></div>
+                            <ul class="chat-user-list" id="channelList">
+                                <li class="chat-user-item active"
+                                    onclick="selectChat('team', 'team_general', 'general', this)"><span
+                                        class="hash">#</span> general</li>
+                                <li class="chat-user-item" onclick="selectChat('team', 'team_design', 'design', this)">
+                                    <span class="hash">#</span> design</li>
+                            </ul>
+                        </div>
+                        <div class="chat-sidebar-section">
+                            <div class="sidebar-header"><span>Direct Messages</span><i class="fas fa-plus"
+                                    style="font-size:0.7rem;" onclick="addDM()"></i></div>
+                            <ul class="chat-user-list" id="dmList">
+                                <li class="chat-user-item" onclick="selectChat('team', 'dm_jane', 'Jane Doe', this)">
+                                    <img src="https://i.pravatar.cc/150?img=5">
+                                    <div>
+                                        <h4>Jane Doe</h4>
+                                    </div>
+                                    <div class="presence-dot"></div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="chat-main">
+                        <div class="chat-header">
+                            <button class="menu-toggle" style="font-size: 1.2rem;"
+                                onclick="toggleChatSidebar('teamSidebar')"><i class="fas fa-bars"></i></button>
+                            <h4 id="teamChatHeader"><span class="hash">#</span> general</h4>
+                            <div class="chat-header-actions">
+                                <button onclick="startCall('audio')"><i class="fas fa-phone"></i></button>
+                                <button onclick="startCall('video')"><i class="fas fa-video"></i></button>
+                            </div>
+                        </div>
+                        <div class="chat-messages" id="teamChatMessages"></div>
+                        <div class="typing-indicator" id="teamTyping"></div>
+                        <div class="chat-input-area">
+                            <div class="chat-input-tools">
+                                <button class="tool-btn" onclick="document.getElementById('fileInputTeam').click()"><i
+                                        class="fas fa-paperclip"></i></button>
+                                <input type="file" id="fileInputTeam" style="display:none"
+                                    onchange="handleFileUpload(event, 'team')">
+                            </div>
+                            <input type="text" id="teamChatInput" placeholder="Message #general..."
+                                oninput="handleTyping('team')" onkeypress="handleChatSend(event, 'team')">
+                            <button class="chat-send-btn" onclick="sendMessage('team')"><i
+                                    class="fas fa-paper-plane"></i></button>
+                        </div>
+
+                        <div class="thread-panel" id="threadPanel">
+                            <div class="thread-header">
+                                <h5>Thread</h5>
+                                <button class="thread-close" onclick="closeThread()">&times;</button>
+                            </div>
+                            <div class="thread-messages" id="threadMessages"></div>
+                            <div class="thread-input">
+                                <input type="text" id="threadInput" placeholder="Reply..."
+                                    onkeypress="handleThreadSend(event)">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SITE SETTINGS -->
+        <div id="siteSettings" class="view">
+            <div class="grid-2-equal">
+                <div class="card">
+                    <div class="card-title">General & About Us Content</div>
+                    <form id="settingsForm" onsubmit="saveSettings(event)">
+                        <div class="form-group"><label>Hero Title (HTML allowed)</label><textarea id="setHeroTitle"
+                                rows="3"
+                                placeholder="Building <span class='gradient'>digital excellence</span>..."></textarea>
+                        </div>
+                        <div class="form-group"><label>Hero Description</label><textarea id="setHeroDesc" rows="3"
+                                placeholder="Primetech Designs delivers..."></textarea></div>
+
+                        <div class="form-group"><label>About Us - Title</label><input type="text" id="setAboutTitle"
+                                placeholder="Your partner in digital transformation"></div>
+                        <div class="form-group"><label>About Us - Paragraph 1</label><textarea id="setAboutText1"
+                                rows="3" placeholder="Primetech Designs is a Zambian-owned..."></textarea></div>
+                        <div class="form-group"><label>About Us - Paragraph 2</label><textarea id="setAboutText2"
+                                rows="3" placeholder="We combine technical depth..."></textarea></div>
+
+                        <div class="form-group"><label>Footer Description</label><textarea id="setFooterDesc" rows="3"
+                                placeholder="Building digital solutions that help..."></textarea></div>
+                        <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Save Website
+                            Content</button>
+                    </form>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">Contact Info & Analytics</div>
+                    <form id="contactInfoForm" onsubmit="saveSettings(event)">
+                        <div class="form-group"><label>Contact Email</label><input type="email" id="setEmail"
+                                placeholder="info@primetechdesigns.com"></div>
+                        <div class="form-group"><label>Contact Phone</label><input type="text" id="setPhone"
+                                placeholder="+260 975755276"></div>
+                        <div class="form-group"><label>Location</label><input type="text" id="setLocation"
+                                placeholder="Lusaka, Zambia"></div>
+                        <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Save Contact Info</button>
+                    </form>
+
+                    <hr style="border-color: var(--border); margin: 24px 0;">
+
+                    <div class="card-title" style="margin-bottom: 10px;">Analytics Configuration</div>
+                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px;">Manually update your
+                        site statistics, or integrate Google Analytics later.</p>
+                    <form id="analyticsForm" onsubmit="saveAnalytics(event)">
+                        <div class="form-group"><label>Total Page Views</label><input type="number" id="setViews"
+                                placeholder="1245"></div>
+                        <div class="form-group"><label>Avg. Session Duration</label><input type="text" id="setDur"
+                                placeholder="3m 24s"></div>
+                        <div class="form-group"><label>Bounce Rate (%)</label><input type="number" id="setBounce"
+                                placeholder="42"></div>
+                        <button type="submit" class="btn-primary"><i class="fas fa-chart-line"></i> Update
+                            Stats</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- PORTFOLIO MANAGER -->
+        <div id="portfolio" class="view">
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-title">Add New Project</div>
+                    <form id="projectForm" onsubmit="addProject(event)">
+                        <div class="form-group"><label>Project Title</label><input type="text" id="pTitle"
+                                placeholder="E-commerce Platform" required></div>
+                        <div class="form-group"><label>Short Description (For Card)</label><textarea id="pDesc" rows="2"
+                                placeholder="Full-stack shopping cart with Stripe integration."></textarea></div>
+                        <div class="form-group"><label>Long Description (For Modal)</label><textarea id="pLongDesc"
+                                rows="4" placeholder="Detailed case study of the project..."></textarea></div>
+                        <div class="form-group"><label>Image URL</label><input type="url" id="pImg"
+                                placeholder="https://image-url.jpg" required></div>
+                        <div class="form-group"><label>Live URL (Optional)</label><input type="url" id="pLive"
+                                placeholder="https://project-link.com"></div>
+                        <div class="form-group"><label>GitHub URL (Optional)</label><input type="url" id="pGithub"
+                                placeholder="https://github.com/user/repo"></div>
+                        <div class="form-group"><label>Tags (Comma separated)</label><input type="text" id="pTags"
+                                placeholder="React, Node.js, AWS"></div>
+                        <button type="submit" class="btn-primary"><i class="fas fa-plus"></i> Add Project</button>
+                    </form>
+                </div>
+                <div class="card">
+                    <div class="card-title">Current Projects (Live on Site)</div>
+                    <div id="projectList"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CRM / LEADS -->
+        <div id="crm" class="view">
+            <div class="card">
+                <div class="card-title">Contact Form Submissions</div>
+                <div style="overflow-x: auto;">
+                    <table class="crm-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Subject</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="crmTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TEAM MEMBERS -->
+        <div id="team" class="view">
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-title">Add New Member</div>
+                    <form id="teamForm" onsubmit="addTeamMember(event)">
+                        <div class="form-group"><label>Full Name</label><input type="text" id="tName"
+                                placeholder="Godfrey Bwalya" required></div>
+                        <div class="form-group"><label>Role / Title</label><input type="text" id="tRole"
+                                placeholder="Lead Developer" required></div>
+                        <div class="form-group"><label>Bio</label><textarea id="tBio" rows="3"
+                                placeholder="Short bio..."></textarea></div>
+                        <div class="form-group"><label>Image URL</label><input type="url" id="tImg"
+                                placeholder="https://image-url.jpg" required></div>
+                        <button type="submit" class="btn-primary"><i class="fas fa-plus"></i> Add Member</button>
+                    </form>
+                </div>
+                <div class="card">
+                    <div class="card-title">Current Team</div>
+                    <div id="teamListHtml"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- === CALL MODAL === -->
+    <div class="call-modal" id="callModal">
+        <div class="call-video-container"><video id="callVideo" autoplay muted></video></div>
+        <div class="call-info">
+            <h3 id="callName">Calling...</h3>
+        </div>
+        <div class="call-controls">
+            <button class="call-btn mute" onclick="toggleMute()"><i class="fas fa-microphone-slash"></i></button>
+            <button class="call-btn video" onclick="toggleVideo()"><i class="fas fa-video-slash"></i></button>
+            <button class="call-btn end" onclick="endCall()"><i class="fas fa-phone-slash"></i></button>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // === FIREBASE CONFIGURATION ===
+        const firebaseConfig = {
+            apiKey: "AIzaSyCQNKfoNDPfj-mSZxAQCIEzQ4H3tS-KmiM",
+            authDomain: "primetech-os.firebaseapp.com",
+            projectId: "primetech-os",
+            storageBucket: "primetech-os.firebasestorage.app",
+            messagingSenderId: "853393963895",
+            appId: "1:853393963895:web:e2c881c3eab3e52b88ff72",
+            measurementId: "G-7R82XLTYT4"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const adminName = "Godfrey"; // Hardcoded admin name for chat
+
+        // Global State
+        let currentChatId = 'team_general';
+        let currentChatType = 'team';
+        let activeMessageListener = null;
+        let currentThreadMsgId = null;
+        let activeThreadListener = null;
+        let chartsInitialized = false;
+        let trafficChartInstance, engagementChartInstance, sourcesChartInstance;
+
+        // === TOAST ===
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+
+        // === MOBILE NAV ===
+        function toggleSidebar(state) {
+            document.getElementById('sidebar').classList.toggle('active', state);
+            document.getElementById('overlay').classList.toggle('active', state);
+        }
+
+        function toggleChatSidebar(id) {
+            document.getElementById(id).classList.toggle('mobile-active');
+        }
+
+        // === VIEW SWITCHER ===
+        function switchView(viewId, btn) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            btn.classList.add('active');
+
+            const titles = {
+                dashboard: ['Dashboard Overview', "Welcome back! Here's what's happening today."],
+                clientMessages: ['Client Messages', 'Chat directly with your website leads.'],
+                teamChat: ['Team Communication', 'Slack-style internal chat.'],
+                siteSettings: ['Website Settings', 'Update global site content dynamically.'],
+                portfolio: ['Portfolio Manager', 'Add or remove projects from the live site.'],
+                crm: ['Lead CRM', 'View and manage contact form submissions.'],
+                team: ['Team Members', 'Add or remove team members from the live site.']
+            };
+            document.getElementById('pageTitle').innerText = titles[viewId][0];
+            document.getElementById('pageSubtitle').innerText = titles[viewId][1];
+            toggleSidebar(false);
+
+            if ((viewId === 'dashboard') && chartsInitialized) {
+                if (trafficChartInstance) trafficChartInstance.resize();
+            }
+        }
+
+        // ==========================================
+        // FIREBASE: DASHBOARD STATS & ANALYTICS
+        // ==========================================
+        function initDashboardStats() {
+            // 1. Listen for general site analytics document
+            db.collection('analytics').doc('overview').onSnapshot(doc => {
+                let data = doc.exists ? doc.data() : null;
+                if (!data) {
+                    db.collection('analytics').doc('overview').set({
+                        pageViews: 1245, avgDuration: "3m 24s", bounceRate: 42,
+                        trafficData: [120, 190, 150, 280, 210, 340, 245],
+                        topPages: [
+                            { name: 'Home', percentage: 65 },
+                            { name: 'Services', percentage: 20 },
+                            { name: 'Portfolio', percentage: 10 },
+                            { name: 'Contact', percentage: 5 }
+                        ]
+                    });
+                    return;
+                }
+
+                document.getElementById('statPageViews').innerText = data.pageViews || 0;
+                document.getElementById('statDuration').innerText = data.avgDuration || '0s';
+                document.getElementById('statBounce').innerText = (data.bounceRate || 0) + '%';
+
+                const topPagesHTML = data.topPages.map(page => `
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="font-size: 0.85rem;">${page.name}</span>
+                        <span style="font-size: 0.85rem; color: var(--accent);">${page.percentage}%</span>
+                    </div>
+                    <div style="height: 6px; background: var(--bg); border-radius: 4px; margin-bottom: 10px;">
+                        <div style="width: ${page.percentage}%; height: 100%; background: var(--gradient); border-radius: 4px;"></div>
+                    </div>
+                `).join('');
+                document.getElementById('topPagesList').innerHTML = topPagesHTML;
+
+                if (trafficChartInstance) trafficChartInstance.destroy();
+                initCharts(data);
+                chartsInitialized = true;
+
+                // Populate settings forms
+                document.getElementById('setViews').value = data.pageViews || 0;
+                document.getElementById('setDur').value = data.avgDuration || '';
+                document.getElementById('setBounce').value = data.bounceRate || 0;
+            });
+
+            // 2. Listen for actual leads (Count unread contact submissions)
+            db.collection('contact_submissions').onSnapshot(snapshot => {
+                let unreadCount = 0;
+                snapshot.forEach(doc => {
+                    if (!doc.data().isRead) unreadCount++;
+                });
+                document.getElementById('statLeads').innerText = snapshot.size;
+                document.getElementById('leadBadge').innerText = unreadCount;
+            });
+        }
+
+        function initCharts(data) {
+            const ctx1 = document.getElementById('trafficChart');
+            if (ctx1) trafficChartInstance = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [{ data: data.trafficData, borderColor: '#00D4FF', backgroundColor: 'rgba(0, 212, 255, 0.1)', fill: true, tension: 0.4 }]
+                },
+                options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+            });
+        }
+
+        // ==========================================
+        // FIREBASE: SITE SETTINGS & ANALYTICS SAVE
+        // ==========================================
+        function saveSettings(e) {
+            e.preventDefault();
+            db.collection('site_settings').doc('general').set({
+                heroTitle: document.getElementById('setHeroTitle').value,
+                heroDesc: document.getElementById('setHeroDesc').value,
+                aboutTitle: document.getElementById('setAboutTitle').value,
+                aboutText1: document.getElementById('setAboutText1').value,
+                aboutText2: document.getElementById('setAboutText2').value,
+                footerDesc: document.getElementById('setFooterDesc').value,
+                email: document.getElementById('setEmail').value,
+                phone: document.getElementById('setPhone').value,
+                location: document.getElementById('setLocation').value
+            }, { merge: true }).then(() => showToast("Site settings saved! Live site updated."));
+        }
+
+        function saveAnalytics(e) {
+            e.preventDefault();
+            db.collection('analytics').doc('overview').set({
+                pageViews: Number(document.getElementById('setViews').value),
+                avgDuration: document.getElementById('setDur').value,
+                bounceRate: Number(document.getElementById('setBounce').value)
+            }, { merge: true }).then(() => showToast("Analytics updated!"));
+        }
+
+        // Load Site Settings into form
+        db.collection('site_settings').doc('general').onSnapshot(doc => {
+            if (doc.exists) {
+                const d = doc.data();
+                document.getElementById('setHeroTitle').value = d.heroTitle || '';
+                document.getElementById('setHeroDesc').value = d.heroDesc || '';
+                document.getElementById('setAboutTitle').value = d.aboutTitle || '';
+                document.getElementById('setAboutText1').value = d.aboutText1 || '';
+                document.getElementById('setAboutText2').value = d.aboutText2 || '';
+                document.getElementById('setFooterDesc').value = d.footerDesc || '';
+                document.getElementById('setEmail').value = d.email || '';
+                document.getElementById('setPhone').value = d.phone || '';
+                document.getElementById('setLocation').value = d.location || '';
+            }
+        });
+
+        // ==========================================
+        // FIREBASE: PORTFOLIO MANAGER
+        // ==========================================
+        function addProject(e) {
+            e.preventDefault();
+            const tags = document.getElementById('pTags').value.split(',').map(t => t.trim()).filter(t => t);
+            db.collection('projects').add({
+                title: document.getElementById('pTitle').value,
+                description: document.getElementById('pDesc').value,
+                longDescription: document.getElementById('pLongDesc').value,
+                imageUrl: document.getElementById('pImg').value,
+                liveUrl: document.getElementById('pLive').value,
+                githubUrl: document.getElementById('pGithub').value,
+                tags: tags,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(() => {
+                document.getElementById('projectForm').reset();
+                showToast("Project added to live site!");
+            });
+        }
+
+        function deleteProject(id) {
+            if (confirm("Delete this project?")) {
+                db.collection('projects').doc(id).delete();
+                showToast("Project deleted.");
+            }
+        }
+
+        db.collection('projects').orderBy('createdAt', 'desc').onSnapshot(snapshot => {
+            const list = document.getElementById('projectList');
+            list.innerHTML = '';
+            if (snapshot.empty) {
+                list.innerHTML = '<p style="color: var(--text-muted); text-align: center;">No projects added yet.</p>';
+                return;
+            }
+            snapshot.forEach(doc => {
+                const p = doc.data();
+                list.innerHTML += `
+                <div class="list-item">
+                    <img src="${p.imageUrl}" onerror="this.src='https://via.placeholder.com/40'">
+                    <div class="list-info">
+                        <h4>${p.title}</h4>
+                        <p>${p.description}</p>
+                    </div>
+                    <button class="btn-danger" onclick="deleteProject('${doc.id}')"><i class="fas fa-trash"></i></button>
+                </div>`;
+            });
+        });
+
+        // ==========================================
+        // FIREBASE: CRM / LEAD SUBMISSIONS
+        // ==========================================
+        function markLeadRead(id, isRead) {
+            db.collection('contact_submissions').doc(id).update({ isRead: !isRead });
+        }
+
+        function deleteLead(id) {
+            if (confirm("Delete this submission?")) {
+                db.collection('contact_submissions').doc(id).delete();
+            }
+        }
+
+        db.collection('contact_submissions').orderBy('timestamp', 'desc').onSnapshot(snapshot => {
+            const tbody = document.getElementById('crmTableBody');
+            tbody.innerHTML = '';
+            if (snapshot.empty) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No submissions yet.</td></tr>';
+                return;
+            }
+            snapshot.forEach(doc => {
+                const s = doc.data();
+                const date = s.timestamp ? new Date(s.timestamp.toDate()).toLocaleDateString() : '...';
+                const isRead = s.isRead;
+                tbody.innerHTML += `
+                <tr class="${isRead ? '' : 'unread'}">
+                    <td>${s.name}</td>
+                    <td>${s.email}</td>
+                    <td style="cursor: pointer;" onclick="alert('Message from ${s.name}:\\n\\n${s.message}')">${s.subject}</td>
+                    <td>${date}</td>
+                    <td>
+                        <button class="btn-success" onclick="markLeadRead('${doc.id}', ${isRead})">
+                            <i class="fas fa-${isRead ? 'envelope' : 'envelope-open'}"></i>
+                        </button>
+                        <button class="btn-danger" onclick="deleteLead('${doc.id}')"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>`;
+            });
+        });
+
+        // ==========================================
+        // FIREBASE: TEAM MEMBERS
+        // ==========================================
+        function addTeamMember(e) {
+            e.preventDefault();
+            db.collection('team_members').add({
+                name: tName.value, role: tRole.value, bio: tBio.value, img: tImg.value
+            }).then(() => {
+                teamForm.reset();
+                showToast("Team member added to live site!");
+            });
+        }
+
+        function deleteTeamMember(id) {
+            if (confirm("Remove this team member?")) {
+                db.collection('team_members').doc(id).delete();
+            }
+        }
+
+        db.collection('team_members').onSnapshot(snapshot => {
+            const list = document.getElementById('teamListHtml');
+            list.innerHTML = '';
+            if (snapshot.empty) {
+                list.innerHTML = '<p style="color: var(--text-muted); text-align: center;">No team members added yet.</p>';
+                return;
+            }
+            snapshot.forEach(doc => {
+                const m = doc.data();
+                list.innerHTML += `
+                <div class="list-item">
+                    <img src="${m.img}" onerror="this.src='https://via.placeholder.com/40'">
+                    <div class="list-info">
+                        <h4>${m.name}</h4>
+                        <p>${m.role}</p>
+                    </div>
+                    <button class="btn-danger" onclick="deleteTeamMember('${doc.id}')"><i class="fas fa-trash"></i></button>
+                </div>`;
+            });
+        });
+
+        // ==========================================
+        // CHAT LOGIC (CLIENT & TEAM)
+        // ==========================================
+        document.addEventListener("DOMContentLoaded", () => {
+            initDashboardStats();
+            selectChat('team', 'team_general', 'general', document.querySelector('#teamChat .chat-user-item'));
+        });
+
+        function selectChat(type, chatId, name, element) {
+            currentChatType = type;
+            currentChatId = chatId;
+
+            document.querySelectorAll('.chat-user-item').forEach(el => el.classList.remove('active'));
+            if (element) element.classList.add('active');
+
+            if (type === 'client') {
+                document.getElementById('clientChatHeader').innerHTML = `<i class="fas fa-lock" style="font-size:0.7rem; color:var(--text-muted);"></i> ${name}`;
+                document.getElementById('clientChatInput').placeholder = `Message ${name}...`;
+            } else {
+                const isChannel = ['general', 'design', 'backend-dev'].includes(name);
+                document.getElementById('teamChatHeader').innerHTML = isChannel ? `<span class="hash">#</span> ${name}` : `<img src="https://i.pravatar.cc/150?img=5" style="width:24px; height:24px; border-radius:50%; margin-right:5px;"> ${name}`;
+                document.getElementById('teamChatInput').placeholder = `Message ${name}...`;
+            }
+
+            if (window.innerWidth <= 768) {
+                document.getElementById(type === 'client' ? 'clientSidebar' : 'teamSidebar').classList.remove('mobile-active');
+            }
+
+            if (activeMessageListener) activeMessageListener();
+
+            const msgAreaId = type === 'client' ? 'clientChatMessages' : 'teamChatMessages';
+            const msgArea = document.getElementById(msgAreaId);
+            msgArea.innerHTML = '<div style="text-align:center; color:var(--text-muted); margin-top:20px;">Loading messages...</div>';
+
+            activeMessageListener = db.collection('chats').doc(chatId).collection('messages').orderBy('timestamp', 'asc').onSnapshot(snapshot => {
+                msgArea.innerHTML = '';
+                if (snapshot.empty) {
+                    msgArea.innerHTML = '<div style="text-align:center; color:var(--text-muted); margin-top:40px;"><i class="fas fa-comments" style="font-size:2rem; display:block; margin-bottom:10px;"></i>No messages yet.</div>';
+                    return;
+                }
+                snapshot.forEach(doc => {
+                    renderMessage(doc, msgArea, type);
+                });
+                msgArea.scrollTop = msgArea.scrollHeight;
+            });
+        }
+
+        function renderMessage(doc, msgArea, type) {
+            const m = doc.data();
+            const msgId = doc.id;
+            const time = m.timestamp ? new Date(m.timestamp.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '...';
+            const isSent = m.sender === adminName;
+            const wrapper = document.createElement('div');
+            wrapper.className = `message-wrapper ${isSent ? 'sent' : 'received'}`;
+            wrapper.dataset.id = msgId;
+
+            let actionsHTML = isSent ? `
+                <div class="message-actions">
+                    <button class="action-btn" onclick="editMessage('${msgId}', '${type}')" title="Edit"><i class="fas fa-pencil-alt"></i></button>
+                    <button class="action-btn" onclick="deleteMessage('${msgId}', '${type}')" title="Delete"><i class="fas fa-trash"></i></button>
+                    <button class="action-btn" onclick="openThread('${msgId}')" title="Reply in thread"><i class="fas fa-reply"></i></button>
+                </div>` : `
+                <div class="message-actions">
+                    <button class="action-btn" onclick="openThread('${msgId}')" title="Reply in thread"><i class="fas fa-reply"></i></button>
+                </div>`;
+
+            let reactionsHTML = '<div class="applied-reactions" id="reactions_' + msgId + '"></div>';
+            let reactionBarHTML = `<div class="reaction-bar"><span onclick="addReaction('${msgId}', '👍')">👍</span><span onclick="addReaction('${msgId}', '❤️')">❤️</span><span onclick="addReaction('${msgId}', '🎉')">🎉</span></div>`;
+            let threadBtnHTML = m.threadCount > 0 ? `<button class="thread-reply-btn" onclick="openThread('${msgId}')"><i class="fas fa-reply"></i> ${m.threadCount} replies</button>` : '';
+
+            wrapper.innerHTML = `
+                <div class="message-info"><strong>${isSent ? 'You' : m.sender}</strong> <span>${time}</span></div>
+                <div class="message">${formatMessage(m.text)}</div>
+                ${actionsHTML} ${reactionBarHTML} ${reactionsHTML} ${threadBtnHTML}
+            `;
+            msgArea.appendChild(wrapper);
+
+            if (m.reactions) {
+                const reactArea = wrapper.querySelector(`#reactions_${msgId}`);
+                Object.keys(m.reactions).forEach(emoji => {
+                    reactArea.innerHTML += `<span class="reaction-pill" onclick="removeReaction('${msgId}', '${emoji}')">${emoji} ${m.reactions[emoji].length}</span>`;
+                });
+            }
+        }
+
+        function formatMessage(text) {
+            if (!text) return '';
+            let html = text.replace(/\*([^*]+)\*/g, '<strong>$1</strong>').replace(/_([^_]+)_/g, '<em>$1</em>');
+            if (text.startsWith('/giphy')) {
+                const query = text.split(' ').slice(1).join(' ');
+                return `<div style="text-align:center; font-size:0.7rem; opacity:0.7; margin-bottom:5px;">/giphy ${query}</div><img src="https://media.giphy.com/media/sSgvbe1m3n93GqgjHc/giphy.gif" alt="GIF" style="max-width:200px; border-radius:8px;">`;
+            }
+            return html;
+        }
+
+        function sendMessage(type) {
+            const inputId = type === 'client' ? 'clientChatInput' : 'teamChatInput';
+            const input = document.getElementById(inputId);
+            if (input.value.trim() !== '') {
+                db.collection('chats').doc(currentChatId).collection('messages').add({
+                    text: input.value, sender: adminName,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(), reactions: {}
+                });
+                input.value = '';
+            }
+        }
+        function handleChatSend(e, type) { if (e.key === 'Enter') sendMessage(type); }
+
+        function editMessage(id, type) {
+            const wrapper = document.querySelector(`.message-wrapper[data-id="${id}"]`);
+            const oldText = wrapper.querySelector('.message').innerText;
+            const newText = prompt("Edit message:", oldText);
+            if (newText !== null && newText.trim() !== '') {
+                db.collection('chats').doc(currentChatId).collection('messages').doc(id).update({ text: newText });
+            }
+        }
+
+        function deleteMessage(id, type) {
+            if (confirm("Delete this message?")) {
+                db.collection('chats').doc(currentChatId).collection('messages').doc(id).delete();
+            }
+        }
+
+        async function addReaction(msgId, emoji) {
+            const msgRef = db.collection('chats').doc(currentChatId).collection('messages').doc(msgId);
+            await msgRef.set({ reactions: { [emoji]: firebase.firestore.FieldValue.arrayUnion(adminName) } }, { merge: true });
+        }
+
+        async function removeReaction(msgId, emoji) {
+            const msgRef = db.collection('chats').doc(currentChatId).collection('messages').doc(msgId);
+            await msgRef.set({ reactions: { [emoji]: firebase.firestore.FieldValue.arrayRemove(adminName) } }, { merge: true });
+        }
+
+        function openThread(msgId) {
+            currentThreadMsgId = msgId;
+            document.getElementById('threadPanel').classList.add('active');
+            if (activeThreadListener) activeThreadListener();
+            const threadArea = document.getElementById('threadMessages');
+            threadArea.innerHTML = '<div style="text-align:center; color:var(--text-muted);">Loading thread...</div>';
+
+            db.collection('chats').doc(currentChatId).collection('messages').doc(msgId).get().then(doc => {
+                const m = doc.data();
+                const time = m.timestamp ? new Date(m.timestamp.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '...';
+                threadArea.innerHTML = `
+                    <div class="message-wrapper received" style="max-width: 100%; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 15px;">
+                        <div class="message-info"><strong>${m.sender}</strong> <span>${time}</span></div>
+                        <div class="message">${formatMessage(m.text)}</div>
+                    </div>
+                `;
+            });
+
+            activeThreadListener = db.collection('chats').doc(currentChatId).collection('messages').doc(msgId).collection('replies').orderBy('timestamp', 'asc').onSnapshot(snapshot => {
+                const parentHTML = threadArea.innerHTML.split('<div class="message-wrapper sent"')[0];
+                if (snapshot.empty) {
+                    threadArea.innerHTML = parentHTML + '<div style="text-align:center; color:var(--text-muted); margin-top:10px;">No replies yet.</div>';
+                    return;
+                }
+                let repliesHTML = '';
+                snapshot.forEach(doc => {
+                    const r = doc.data();
+                    const time = r.timestamp ? new Date(r.timestamp.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '...';
+                    const isSent = r.sender === adminName;
+                    repliesHTML += `
+                        <div class="message-wrapper ${isSent ? 'sent' : 'received'}" style="max-width: 100%;">
+                            <div class="message-info"><strong>${isSent ? 'You' : r.sender}</strong> <span>${time}</span></div>
+                            <div class="message">${formatMessage(r.text)}</div>
+                        </div>`;
+                });
+                threadArea.innerHTML = parentHTML + repliesHTML;
+                threadArea.scrollTop = threadArea.scrollHeight;
+            });
+        }
+
+        function closeThread() {
+            document.getElementById('threadPanel').classList.remove('active');
+            if (activeThreadListener) activeThreadListener();
+            currentThreadMsgId = null;
+        }
+
+        function handleThreadSend(e) {
+            if (e.key === 'Enter') {
+                const input = document.getElementById('threadInput');
+                if (input.value.trim() !== '' && currentThreadMsgId) {
+                    db.collection('chats').doc(currentChatId).collection('messages').doc(currentThreadMsgId).collection('replies').add({
+                        text: input.value, sender: adminName, timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    db.collection('chats').doc(currentChatId).collection('messages').doc(currentThreadMsgId).set({
+                        threadCount: firebase.firestore.FieldValue.increment(1)
+                    }, { merge: true });
+                    input.value = '';
+                }
+            }
+        }
+
+        let typingTimeout;
+        function handleTyping(type) {
+            const indicator = document.getElementById(type === 'client' ? 'clientTyping' : 'teamTyping');
+            indicator.innerText = "You are typing...";
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => { indicator.innerText = ""; }, 1500);
+        }
+
+        function handleFileUpload(event, type) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                let msgContent = file.type.startsWith('image/') ? `<img src="${e.target.result}" alt="upload">` : `<a href="${e.target.result}" download="${file.name}" style="color:#fff; text-decoration:underline;"><i class="fas fa-file"></i> ${file.name}</a>`;
+                db.collection('chats').doc(currentChatId).collection('messages').add({
+                    text: msgContent, sender: adminName, timestamp: firebase.firestore.FieldValue.serverTimestamp(), reactions: {}
+                });
+            }
+            reader.readAsDataURL(file);
+            event.target.value = '';
+        }
+
+        function addChannel() {
+            const name = prompt("Enter new channel name:");
+            if (name) {
+                const id = 'team_' + name.replace(/\s+/g, '_').toLowerCase();
+                const list = document.getElementById('channelList');
+                const li = document.createElement('li');
+                li.className = 'chat-user-item';
+                li.onclick = function () { selectChat('team', id, name, this); };
+                li.innerHTML = `<span class="hash">#</span> ${name}`;
+                list.appendChild(li);
+                selectChat('team', id, name, li);
+                showToast(`Channel #${name} created!`);
+            }
+        }
+
+        function addDM() {
+            const name = prompt("Enter name of person to message:");
+            if (name) {
+                const id = 'dm_' + name.replace(/\s+/g, '_').toLowerCase();
+                const list = document.getElementById('dmList');
+                const li = document.createElement('li');
+                li.className = 'chat-user-item';
+                li.onclick = function () { selectChat('team', id, name, this); };
+                li.innerHTML = `<img src="https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 50) + 1}"><div><h4>${name}</h4></div>`;
+                list.appendChild(li);
+                selectChat('team', id, name, li);
+                showToast(`DM with ${name} started!`);
+            }
+        }
+
+        // === CALLS ===
+        let callStream = null;
+        async function startCall(type) {
+            try {
+                callStream = await navigator.mediaDevices.getUserMedia({ video: type === 'video', audio: true });
+                document.getElementById('callVideo').srcObject = callStream;
+                document.getElementById('callModal').classList.add('active');
+                document.getElementById('callName').innerText = type === 'video' ? 'Video Call Connected' : 'Voice Call Connected';
+            } catch (err) { alert("Camera/Mic access denied. Use HTTPS or localhost."); }
+        }
+        function endCall() { if (callStream) callStream.getTracks().forEach(t => t.stop()); document.getElementById('callModal').classList.remove('active'); }
+        function toggleMute() { if (callStream) callStream.getAudioTracks().forEach(t => t.enabled = !t.enabled); }
+        function toggleVideo() { if (callStream) callStream.getVideoTracks().forEach(t => t.enabled = !t.enabled); }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>500 - Server Error | Godfrey Bwalya</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #00abf0;
+            --secondary-color: #333;
+            --text-color: #333;
+            --light-text: #666;
+            --bg-color: #f9f9f9;
+            --error-color: #e74c3c;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .error-container {
+            max-width: 600px;
+            padding: 2rem;
+        }
+
+        .error-icon {
+            font-size: 5rem;
+            color: var(--error-color);
+            margin-bottom: 1rem;
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        .error-code {
+            font-size: 4rem;
+            font-weight: 700;
+            color: var(--error-color);
+            margin-bottom: 1rem;
+        }
+
+        .error-title {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: var(--secondary-color);
+        }
+
+        .error-message {
+            font-size: 1.1rem;
+            color: var(--light-text);
+            margin-bottom: 2rem;
+        }
+
+        .error-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 30px;
+            background-color: var(--primary-color);
+            color: white;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: 2px solid var(--primary-color);
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            color: var(--primary-color);
+        }
+
+        .btn-outline:hover {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .status-info {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            margin-bottom: 2rem;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .status-item:last-child {
+            border-bottom: none;
+        }
+
+        .status-label {
+            font-weight: 600;
+            color: var(--secondary-color);
+        }
+
+        .status-value {
+            color: var(--light-text);
+        }
+
+        .countdown {
+            font-size: 1.2rem;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .error-code {
+                font-size: 3rem;
+            }
+            
+            .error-title {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-icon">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <div class="error-code">500</div>
+        <h1 class="error-title">Server Error</h1>
+        <p class="error-message">
+            Something went wrong on our end. Our team has been notified and is working to fix the issue.
+        </p>
+        
+        <div class="countdown" id="countdown">
+            Redirecting to homepage in <span id="timer">10</span> seconds...
+        </div>
+        
+        <div class="status-info">
+            <div class="status-item">
+                <span class="status-label">Error Code:</span>
+                <span class="status-value">500 Internal Server Error</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Time:</span>
+                <span class="status-value" id="errorTime"></span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Status:</span>
+                <span class="status-value">Being investigated</span>
+            </div>
+        </div>
+        
+        <div class="error-actions">
+            <a href="/" class="btn">Go Home Now</a>
+            <a href="javascript:location.reload()" class="btn btn-outline">Try Again</a>
+        </div>
+        
+        <p style="color: var(--light-text); font-size: 0.9rem;">
+            If the problem persists, please contact me at <a href="mailto:godfrey.bwalya@cs.unza.zm" style="color: var(--primary-color);">godfrey.bwalya@cs.unza.zm</a>
+        </p>
+    </div>
+
+    <script>
+        // Set current time
+        document.getElementById('errorTime').textContent = new Date().toLocaleString();
+        
+        // Countdown timer
+        let seconds = 10;
+        const timerElement = document.getElementById('timer');
+        const countdownElement = document.getElementById('countdown');
+        
+        const countdown = setInterval(() => {
+            seconds--;
+            timerElement.textContent = seconds;
+            
+            if (seconds <= 0) {
+                clearInterval(countdown);
+                window.location.href = '/';
+            }
+        }, 1000);
+        
+        // Stop countdown if user interacts
+        countdownElement.addEventListener('click', () => {
+            clearInterval(countdown);
+            countdownElement.style.display = 'none';
+        });
+        
+        // Log 500 error for analytics
+        if (typeof gtag !== 'undefined') {
+            gtag('event', '500', {
+                'event_category': 'Error',
+                'event_label': window.location.pathname
+            });
+        }
+        
+        // Try to report error to monitoring service
+        fetch('/api/error-report', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                error: '500 Internal Server Error',
+                url: window.location.href,
+                userAgent: navigator.userAgent,
+                timestamp: new Date().toISOString()
+            })
+        }).catch(() => {
+            // Silently fail if error reporting fails
+        });
+    </script>
+</body>
+</html>
