@@ -342,7 +342,7 @@
                     card.className = 'team-card reveal';
                     card.innerHTML = `
                         <div class="team-img">
-                            <img src="${m.img || 'https://via.placeholder.com/400x400'}" alt="${m.name}" loading="lazy" />
+                            <img src="${m.img || 'https://via.placeholder.com/400x400'}" alt="${m.name}" loading="lazy" decoding="async" />
                         </div>
                         <div class="team-info">
                             <h3>${m.name}</h3>
@@ -379,7 +379,7 @@
                     html += `
                         <div class="project-card reveal">
                             <div class="project-img">
-                                <img src="${p.imageUrl || 'https://placehold.co/300x150/06060a/8b95a7?text=Primetech'}" alt="${p.title}" loading="lazy" />
+                                <img src="${p.imageUrl || 'https://placehold.co/300x150/06060a/8b95a7?text=Primetech'}" alt="${p.title}" loading="lazy" decoding="async" />
                                 <div class="project-overlay">
                                     <a href="#" class="project-details-btn" data-project="${doc.id}" aria-label="View details"><i class="fas fa-expand"></i></a>
                                     ${p.liveUrl ? `<a href="${p.liveUrl}" target="_blank" rel="noopener" aria-label="Live Site"><i class="fas fa-external-link-alt"></i></a>` : ''}

@@ -80,6 +80,23 @@
             padding: 0 20px;
         }
 
+        section {
+            padding: 72px 0;
+            content-visibility: auto;
+            contain-intrinsic-size: 900px 700px;
+        }
+
+        .service-card,
+        .team-card,
+        .process-card,
+        .project-card,
+        .testimonial-card,
+        .insight-card,
+        .tech-item,
+        .faq-item {
+            content-visibility: auto;
+        }
+
         /* ===== BG EFFECTS ===== */
         body::before {
             content: '';
@@ -687,15 +704,15 @@
         /* ===== SERVICES ===== */
         .services-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 12px;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 14px;
         }
 
         .service-card {
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: 12px;
-            padding: 20px;
+            padding: 18px 16px;
             transition: all 0.3s ease;
             text-align: center;
         }
@@ -743,8 +760,8 @@
         /* ===== TEAM ===== */
         .team-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 16px;
         }
 
         .team-card {
@@ -765,7 +782,7 @@
 
         .team-img {
             position: relative;
-            height: 260px;
+            height: 220px;
             overflow: hidden;
         }
 
@@ -783,7 +800,7 @@
         }
 
         .team-info {
-            padding: 18px;
+            padding: 16px 14px 14px;
             text-align: center;
             display: flex;
             flex-direction: column;
@@ -793,26 +810,26 @@
 
         .team-info h3 {
             font-family: 'Space Grotesk', sans-serif;
-            font-size: 1rem;
+            font-size: 0.96rem;
             margin-bottom: 2px;
         }
 
         .team-role {
             display: block;
-            font-size: 0.7rem;
+            font-size: 0.66rem;
             color: var(--accent);
             font-weight: 600;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
 
         .team-info p {
-            font-size: 0.78rem;
+            font-size: 0.74rem;
             color: var(--text-muted);
             font-weight: 300;
-            line-height: 1.5;
-            margin-bottom: 14px;
+            line-height: 1.45;
+            margin-bottom: 12px;
         }
 
         .team-social {
@@ -845,15 +862,15 @@
         /* ===== PROCESS ===== */
         .process-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 16px;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 14px;
         }
 
         .process-card {
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: 12px;
-            padding: 24px;
+            padding: 20px 18px;
             position: relative;
             transition: all 0.3s ease;
         }
@@ -1098,7 +1115,7 @@
             transition: all 0.3s ease;
             display: flex;
             flex-direction: column;
-            flex: 0 0 280px;
+            flex: 0 0 250px;
         }
 
         .project-card:hover {
@@ -1109,7 +1126,7 @@
 
         .project-img {
             position: relative;
-            height: 150px;
+            height: 138px;
             overflow: hidden;
         }
 
@@ -1161,22 +1178,22 @@
         }
 
         .project-body {
-            padding: 16px;
+            padding: 14px;
             flex: 1;
         }
 
         .project-body h3 {
             font-family: 'Space Grotesk', sans-serif;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             margin-bottom: 6px;
         }
 
         .project-body p {
-            font-size: 0.78rem;
+            font-size: 0.75rem;
             color: var(--text-muted);
             margin-bottom: 12px;
             font-weight: 300;
-            line-height: 1.5;
+            line-height: 1.45;
         }
 
         .tags {
@@ -1198,15 +1215,15 @@
         /* ===== TESTIMONIALS ===== */
         .testimonial-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 12px;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 14px;
         }
 
         .testimonial-card {
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: 12px;
-            padding: 20px;
+            padding: 18px 16px;
             transition: all 0.3s ease;
         }
 
@@ -1270,7 +1287,7 @@
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: 16px;
-            padding: 32px;
+            padding: 24px;
             position: relative;
             overflow: hidden;
         }
@@ -1714,12 +1731,20 @@
                 padding: 80px 16px 40px;
             }
 
+            .services-grid,
+            .team-grid,
+            .process-grid,
+            .testimonial-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
             .info-grid {
                 grid-template-columns: 1fr;
             }
 
             .services-grid,
-            .testimonial-grid {
+            .testimonial-grid,
+            .process-grid {
                 grid-template-columns: 1fr;
             }
 
@@ -1728,7 +1753,7 @@
             }
 
             .project-card {
-                flex: 0 0 240px;
+                flex: 0 0 220px;
             }
 
             .projects-track {
@@ -1749,6 +1774,13 @@
         @media (max-width: 480px) {
             .container {
                 padding: 0 16px;
+            }
+
+            .services-grid,
+            .team-grid,
+            .process-grid,
+            .testimonial-grid {
+                grid-template-columns: 1fr;
             }
 
             .logo {
