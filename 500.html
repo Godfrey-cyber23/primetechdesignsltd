@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>404 - Page Not Found | Primetech Designs</title>
-    <meta name="description" content="The page you requested could not be found. Explore Primetech Designs for digital solutions, cloud infrastructure, and IT consulting." />
+    <title>500 - Server Error | Primetech Designs</title>
+    <meta name="description" content="Something went wrong. Return to the Primetech Designs homepage or contact us for support." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
@@ -14,14 +14,14 @@
             --bg: #06060a;
             --bg-2: #0d1320;
             --surface: rgba(17, 23, 38, 0.8);
-            --surface-strong: #0f172a;
             --border: rgba(255,255,255,0.08);
             --text: #f4f7fb;
             --muted: #90a0b7;
             --accent: #00d4ff;
             --accent-2: #7b2fff;
             --gradient: linear-gradient(135deg, #00d4ff 0%, #7b2fff 100%);
-            --success: #4ade80;
+            --danger: #ff5d6c;
+            --danger-soft: rgba(255, 93, 108, 0.14);
             --shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
         }
 
@@ -33,7 +33,7 @@
             font-family: 'Inter', sans-serif;
             background:
                 radial-gradient(circle at top left, rgba(123, 47, 255, 0.25), transparent 30%),
-                radial-gradient(circle at bottom right, rgba(0, 212, 255, 0.18), transparent 30%),
+                radial-gradient(circle at bottom right, rgba(255, 93, 108, 0.12), transparent 35%),
                 var(--bg);
             color: var(--text);
         }
@@ -61,7 +61,7 @@
         .info-panel {
             padding: 50px 42px 38px;
             position: relative;
-            background: linear-gradient(135deg, rgba(123, 47, 255, 0.16), rgba(6, 6, 10, 0.14));
+            background: linear-gradient(135deg, rgba(255, 93, 108, 0.08), rgba(6, 6, 10, 0.12));
         }
 
         .brand {
@@ -107,8 +107,8 @@
             width: 8px;
             height: 8px;
             border-radius: 50%;
-            background: var(--success);
-            box-shadow: 0 0 12px rgba(74, 222, 128, 0.8);
+            background: var(--danger);
+            box-shadow: 0 0 12px rgba(255, 93, 108, 0.8);
         }
 
         .error-code {
@@ -117,7 +117,7 @@
             line-height: 1;
             font-weight: 800;
             letter-spacing: -0.08em;
-            background: linear-gradient(135deg, #ffffff 0%, #8edbff 40%, #bda3ff 100%);
+            background: linear-gradient(135deg, #ffffff 0%, #ffb2b8 35%, #ffc0c5 100%);
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
@@ -139,11 +139,35 @@
             font-size: 1.02rem;
         }
 
+        .status-box {
+            display: grid;
+            gap: 12px;
+            max-width: 420px;
+            padding: 18px 18px 14px;
+            margin-bottom: 28px;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,0.03);
+        }
+
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            font-size: 0.92rem;
+            color: var(--muted);
+        }
+
+        .status-row strong {
+            color: var(--text);
+            font-weight: 600;
+        }
+
         .actions {
             display: flex;
             flex-wrap: wrap;
             gap: 14px;
-            margin-bottom: 26px;
+            margin-bottom: 18px;
         }
 
         .btn {
@@ -155,7 +179,7 @@
             border-radius: 12px;
             text-decoration: none;
             font-weight: 700;
-            transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
 
         .btn:hover {
@@ -174,22 +198,16 @@
             border: 1px solid var(--border);
         }
 
-        .mini-links {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-        }
-
-        .mini-links a {
+        .support {
             color: var(--muted);
-            text-decoration: none;
-            font-size: 0.9rem;
-            border-bottom: 1px solid transparent;
+            line-height: 1.7;
+            font-size: 0.92rem;
         }
 
-        .mini-links a:hover {
+        .support a {
             color: var(--text);
-            border-color: rgba(255,255,255,0.18);
+            text-decoration: none;
+            border-bottom: 1px solid rgba(255,255,255,0.18);
         }
 
         .visual-panel {
@@ -234,8 +252,8 @@
             width: 8px;
             height: 8px;
             border-radius: 50%;
-            background: var(--success);
-            box-shadow: 0 0 10px rgba(74, 222, 128, 0.8);
+            background: var(--danger);
+            box-shadow: 0 0 10px rgba(255, 93, 108, 0.8);
         }
 
         .panel-content h2 {
@@ -287,32 +305,34 @@
                 <span>Primetech Designs</span>
             </a>
 
-            <div class="eyebrow">System notice</div>
-            <div class="error-code">404</div>
-            <h1>Page not found.</h1>
+            <div class="eyebrow">Service interruption</div>
+            <div class="error-code">500</div>
+            <h1>Something went wrong.</h1>
             <p class="error-message">
-                The page you were trying to reach does not exist or may have moved.
-                Let’s get you back to a working section of our site and continue building smarter digital experiences.
+                We are currently fixing an internal issue with this page. Please try again shortly, or return to the homepage while we resolve it.
             </p>
 
-            <div class="actions">
-                <a href="/" class="btn btn-primary"><i class="fas fa-house"></i> Back to homepage</a>
-                <a href="/#contact" class="btn btn-secondary"><i class="fas fa-envelope"></i> Contact us</a>
+            <div class="status-box" aria-label="Status summary">
+                <div class="status-row"><span>Status</span><strong>Investigating</strong></div>
+                <div class="status-row"><span>Error</span><strong>500 Internal Server Error</strong></div>
+                <div class="status-row"><span>Support</span><strong>info@primetechdesigns.com</strong></div>
             </div>
 
-            <div class="mini-links" aria-label="Helpful links">
-                <a href="/#about">About</a>
-                <a href="/#services">Services</a>
-                <a href="/#portfolio">Portfolio</a>
-                <a href="/#contact">Contact</a>
+            <div class="actions">
+                <a href="/" class="btn btn-primary"><i class="fas fa-rotate-right"></i> Reload homepage</a>
+                <a href="/#contact" class="btn btn-secondary"><i class="fas fa-envelope"></i> Contact support</a>
             </div>
+
+            <p class="support">
+                If this problem keeps happening, email <a href="mailto:info@primetechdesigns.com">info@primetechdesigns.com</a> and we’ll assist immediately.
+            </p>
         </section>
 
         <aside class="visual-panel" aria-hidden="true">
             <div class="panel-content">
-                <div class="tag"><span class="tag-dot"></span> Secure workspace</div>
+                <div class="tag"><span class="tag-dot"></span> System status</div>
                 <h2>Build smarter.<br>Operate faster.</h2>
-                <p>We help ambitious teams turn ideas into dependable, scalable digital systems.</p>
+                <p>We design resilient systems that keep your digital operations moving forward.</p>
             </div>
         </aside>
     </main>
