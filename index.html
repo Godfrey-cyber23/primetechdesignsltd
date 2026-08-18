@@ -726,6 +726,30 @@
         </div>
     </div>
 
+    <!-- ===== RELEASE NOTES ===== -->
+    <div id="releaseNotesModal" class="release-notes-modal" role="dialog" aria-modal="true"
+        aria-labelledby="releaseNotesTitle" aria-describedby="releaseNotesDescription">
+        <div class="release-notes-card">
+            <button class="release-notes-close" id="releaseNotesClose" type="button" aria-label="Close release notes">
+                <i class="fas fa-times"></i>
+            </button>
+            <span class="release-notes-kicker"><i class="fas fa-sparkles"></i> What's new</span>
+            <h2 id="releaseNotesTitle">Primetech Designs has been upgraded</h2>
+            <p id="releaseNotesDescription" class="release-notes-intro">
+                A faster, cleaner experience for discovering our services and recent work.
+            </p>
+            <ul class="release-notes-list">
+                <li><i class="fas fa-check"></i><span><strong>Sharper responsive layout</strong> across phones, tablets, and desktops.</span></li>
+                <li><i class="fas fa-check"></i><span><strong>Smaller project and team cards</strong> for easier scanning.</span></li>
+                <li><i class="fas fa-check"></i><span><strong>Faster loading</strong> with optimized image and script loading.</span></li>
+            </ul>
+            <div class="release-notes-actions">
+                <a href="#portfolio" class="btn btn-primary" id="releaseNotesExplore">Explore the updates <i class="fas fa-arrow-right"></i></a>
+                <button class="release-notes-dismiss" id="releaseNotesDismiss" type="button">Don't show again</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ===== COOKIE BANNER ===== -->
     <div class="cookie-banner" id="cookieBanner">
         <h4><i class="fas fa-cookie-bite"></i> We value your privacy</h4>
@@ -775,7 +799,7 @@
         </div>
     </div>
 
-    <script src="js/main-script.js"></script>
+    <script defer src="js/main-script.js"></script>
 </body>
 
 </html>

@@ -1638,6 +1638,152 @@
             line-height: 1.6;
         }
 
+        /* ===== RELEASE NOTES ===== */
+        .release-notes-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 2100;
+            display: grid;
+            place-items: center;
+            padding: 20px;
+            background: rgba(6, 6, 10, 0.78);
+            backdrop-filter: blur(10px);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.25s ease, visibility 0.25s ease;
+        }
+
+        .release-notes-modal.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .release-notes-card {
+            width: min(100%, 480px);
+            padding: 32px;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid var(--border-hover);
+            border-radius: 16px;
+            background: var(--modal-bg);
+            box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+            transform: translateY(16px) scale(0.98);
+            transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        .release-notes-modal.show .release-notes-card {
+            transform: translateY(0) scale(1);
+        }
+
+        .release-notes-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--gradient);
+        }
+
+        .release-notes-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            width: 32px;
+            height: 32px;
+            display: grid;
+            place-items: center;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--surface-2);
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .release-notes-close:hover {
+            color: var(--text);
+            border-color: var(--border-hover);
+            background: var(--surface);
+        }
+
+        .release-notes-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            margin-bottom: 12px;
+            color: var(--accent);
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .release-notes-card h2 {
+            max-width: 360px;
+            margin-bottom: 10px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: clamp(1.35rem, 4vw, 1.8rem);
+            line-height: 1.15;
+        }
+
+        .release-notes-intro {
+            margin-bottom: 22px;
+            color: var(--text-muted);
+            font-size: 0.84rem;
+            font-weight: 300;
+            line-height: 1.6;
+        }
+
+        .release-notes-list {
+            display: grid;
+            gap: 12px;
+            margin: 0 0 24px;
+            padding: 0;
+            list-style: none;
+        }
+
+        .release-notes-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            line-height: 1.5;
+        }
+
+        .release-notes-list li > i {
+            flex: 0 0 auto;
+            margin-top: 3px;
+            color: var(--accent);
+            font-size: 0.72rem;
+        }
+
+        .release-notes-list strong {
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        .release-notes-actions {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+
+        .release-notes-dismiss {
+            border: 0;
+            background: none;
+            color: var(--text-muted);
+            font: inherit;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+
+        .release-notes-dismiss:hover {
+            color: var(--text);
+        }
+
         /* ===== ANIMATIONS ===== */
         @keyframes pulse {
 

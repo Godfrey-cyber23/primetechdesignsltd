@@ -532,6 +532,36 @@
                 cookieBanner.classList.remove('show');
             });
 
+            // ---- Release Notes ----
+            const releaseNotesModal = document.getElementById('releaseNotesModal');
+            const releaseNotesClose = document.getElementById('releaseNotesClose');
+            const releaseNotesDismiss = document.getElementById('releaseNotesDismiss');
+            const releaseNotesExplore = document.getElementById('releaseNotesExplore');
+            const releaseNotesVersion = '2026-08-18';
+
+            function closeReleaseNotes(savePreference = true) {
+                if (savePreference) {
+                    localStorage.setItem('releaseNotesSeen', releaseNotesVersion);
+                }
+                releaseNotesModal.classList.remove('show');
+            }
+
+            if (localStorage.getItem('releaseNotesSeen') !== releaseNotesVersion) {
+                setTimeout(() => releaseNotesModal.classList.add('show'), 1200);
+            }
+
+            releaseNotesClose.addEventListener('click', () => closeReleaseNotes());
+            releaseNotesDismiss.addEventListener('click', () => closeReleaseNotes());
+            releaseNotesExplore.addEventListener('click', () => closeReleaseNotes());
+            releaseNotesModal.addEventListener('click', (e) => {
+                if (e.target === releaseNotesModal) closeReleaseNotes();
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && releaseNotesModal.classList.contains('show')) {
+                    closeReleaseNotes();
+                }
+            });
+
             // ---- Project Modal ----
             const modal = document.getElementById('project-modal');
             const modalTitle = document.getElementById('modal-title');
