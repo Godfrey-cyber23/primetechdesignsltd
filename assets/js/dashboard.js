@@ -676,7 +676,9 @@ function loadAdminCommandCenter() {
         const members = snapshot.docs.map(doc => ({ ...doc.data(), uid: doc.id }));
         const pending = members.filter(member => member.status === 'pending');
         const managed = members.filter(member => member.uid !== BOOTSTRAP_ADMIN_UID && ['approved', 'suspended'].includes(member.status));
+        const lockedMembers = managed.filter(member => member.loginLocked === true);
         document.getElementById('pendingAdminBadge').innerText = pending.length;
+        document.getElementById('lockedAdminCount').innerText = lockedMembers.length;
         const pendingMarkup = pending.length ? pending.map(member => `
             <div class="list-item" style="align-items:flex-start; gap:12px;">
                 <div class="list-info"><h4>${escapeHtml(member.displayName || member.email || 'New member')}</h4>
@@ -691,11 +693,11 @@ function loadAdminCommandCenter() {
             </div>`).join('') : '<p class="form-help">No pending account requests.</p>';
         const managedMarkup = managed.length ? `<h4 style="margin:20px 0 8px;">Current members</h4>${managed.map(member => `
             <div class="list-item" style="align-items:flex-start; gap:12px;">
-                <div class="list-info"><h4>${escapeHtml(member.displayName || member.email || 'Member')}</h4><p>${escapeHtml(member.email || '')} · ${escapeHtml(member.loginLocked ? 'login locked' : member.status)}</p></div>
+                <div class="list-info"><h4>${escapeHtml(member.displayName || member.email || 'Member')} ${member.loginLocked ? '<span class="admin-lock-badge"><i class="fas fa-lock"></i> LOCKED</span>' : ''}</h4><p>${escapeHtml(member.email || '')} · ${escapeHtml(member.status)}</p></div>
                 <select onchange="updateAdminMember('${member.uid}', this.value)">
                     ${['member', 'manager', 'admin'].map(role => `<option value="${role}" ${member.role === role ? 'selected' : ''}>${role}</option>`).join('')}
                 </select>
-                ${member.loginLocked ? `<button class="btn-success" onclick="unlockAdmin('${member.uid}')" title="Unlock login"><i class="fas fa-unlock"></i></button>` : ''}
+                ${member.loginLocked ? `<button class="btn-success admin-unlock-btn" onclick="unlockAdmin('${member.uid}')" title="Unlock login"><i class="fas fa-unlock"></i> Unlock account</button>` : ''}
                 <button class="${member.status === 'suspended' ? 'btn-success' : 'btn-danger'}" onclick="updateAdminMember('${member.uid}', '${member.status === 'suspended' ? 'approved' : 'suspended'}')" title="${member.status === 'suspended' ? 'Restore access' : 'Suspend access'}"><i class="fas fa-${member.status === 'suspended' ? 'rotate-left' : 'ban'}"></i></button>
             </div>`).join('')}` : '';
         document.getElementById('adminApprovalList').innerHTML = pendingMarkup + managedMarkup;
