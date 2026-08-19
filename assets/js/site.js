@@ -10,6 +10,26 @@
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
+
+        let publicChatUser = null;
+        let publicChatName = localStorage.getItem('publicChatName') || '';
+
+        function ensurePublicChatUser() {
+            if (publicChatUser) return Promise.resolve(publicChatUser);
+            return firebase.auth().signInAnonymously().then(result => {
+                publicChatUser = result.user;
+                return publicChatUser;
+            });
+        }
+
+        function getPublicChatName() {
+            if (publicChatName) return publicChatName;
+            const name = window.prompt('Before we start, what is your name?');
+            if (!name || !name.trim()) return '';
+            publicChatName = name.trim().slice(0, 80);
+            localStorage.setItem('publicChatName', publicChatName);
+            return publicChatName;
+        }
   
         document.addEventListener('DOMContentLoaded', () => {
 
@@ -702,9 +722,14 @@
             }
 
             async function handleUserMessage(text) {
+                const senderName = getPublicChatName();
+                if (!senderName) return;
+                const visitor = await ensurePublicChatUser();
                 await db.collection('chats').doc('client').collection('messages').add({
                     text: text,
                     sender: "Client",
+                    senderName: senderName,
+                    visitorId: visitor.uid,
                     timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
@@ -716,6 +741,8 @@
                         await db.collection('chats').doc('client').collection('messages').add({
                             text: botReply,
                             sender: "Bot",
+                            senderName: 'Primetech Assistant',
+                            visitorId: visitor.uid,
                             timestamp: firebase.firestore.FieldValue.serverTimestamp()
                         });
                     }, 800 + Math.random() * 700);

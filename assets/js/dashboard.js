@@ -13,6 +13,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const adminName = "Godfrey"; // Hardcoded admin name for chat
+let authenticatedAdmin = null;
 
 // Global State
 let currentChatId = 'team_general';
@@ -493,6 +494,7 @@ function renderMessage(doc, msgArea, type) {
     const m = doc.data();
     const msgId = doc.id;
     const time = m.timestamp ? new Date(m.timestamp.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '...';
+    const senderName = m.senderName || m.sender || 'Visitor';
     const isSent = m.sender === adminName;
     const wrapper = document.createElement('div');
     wrapper.className = `message-wrapper ${isSent ? 'sent' : 'received'}`;
@@ -513,7 +515,7 @@ function renderMessage(doc, msgArea, type) {
     let threadBtnHTML = m.threadCount > 0 ? `<button class="thread-reply-btn" onclick="openThread('${msgId}')"><i class="fas fa-reply"></i> ${m.threadCount} replies</button>` : '';
 
     wrapper.innerHTML = `
-                <div class="message-info"><strong>${isSent ? 'You' : m.sender}</strong> <span>${time}</span></div>
+                <div class="message-info"><strong>${isSent ? 'You' : senderName}</strong> <span>${time}</span></div>
                 <div class="message">${formatMessage(m.text)}</div>
                 ${actionsHTML} ${reactionBarHTML} ${reactionsHTML} ${threadBtnHTML}
             `;
@@ -584,10 +586,11 @@ function openThread(msgId) {
 
     db.collection('chats').doc(currentChatId).collection('messages').doc(msgId).get().then(doc => {
         const m = doc.data();
+        const senderName = m.senderName || m.sender || 'Visitor';
         const time = m.timestamp ? new Date(m.timestamp.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '...';
         threadArea.innerHTML = `
                     <div class="message-wrapper received" style="max-width: 100%; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 15px;">
-                        <div class="message-info"><strong>${m.sender}</strong> <span>${time}</span></div>
+                        <div class="message-info"><strong>${senderName}</strong> <span>${time}</span></div>
                         <div class="message">${formatMessage(m.text)}</div>
                     </div>
                 `;
@@ -604,9 +607,10 @@ function openThread(msgId) {
             const r = doc.data();
             const time = r.timestamp ? new Date(r.timestamp.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '...';
             const isSent = r.sender === adminName;
+            const senderName = r.senderName || r.sender || 'Visitor';
             repliesHTML += `
                         <div class="message-wrapper ${isSent ? 'sent' : 'received'}" style="max-width: 100%;">
-                            <div class="message-info"><strong>${isSent ? 'You' : r.sender}</strong> <span>${time}</span></div>
+                            <div class="message-info"><strong>${isSent ? 'You' : senderName}</strong> <span>${time}</span></div>
                             <div class="message">${formatMessage(r.text)}</div>
                         </div>`;
         });
@@ -1564,11 +1568,23 @@ function cancelLogout() {
 }
 
 // Check if user is logged in
-firebase.auth().onAuthStateChanged(user => {
-    if (!user) {
+firebase.auth().onAuthStateChanged(async user => {
+    if (!user || user.isAnonymous) {
         // User is NOT logged in, redirect to login page
         window.location.href = 'login.html';
-    } else {
+        return;
+    }
+
+    try {
+        const profileSnapshot = await db.collection('admin_users').doc(user.uid).get();
+        const profile = profileSnapshot.exists ? profileSnapshot.data() : null;
+        if (!profile || profile.status !== 'approved') {
+            await firebase.auth().signOut();
+            window.location.href = 'login.html';
+            return;
+        }
+
+        authenticatedAdmin = user;
         // User IS logged in, safe to load dashboard data
         console.log("Admin authenticated:", user.email);
 
@@ -1589,5 +1605,9 @@ firebase.auth().onAuthStateChanged(user => {
             selectChat('team', 'team_general', 'general', document.querySelector('#teamChat .chat-user-item'));
             window.chatInitialized = true;
         }
+    } catch (error) {
+        console.error('Admin approval check failed:', error);
+        await firebase.auth().signOut();
+        window.location.href = 'login.html';
     }
 });

@@ -33,6 +33,44 @@ function setLoading(buttonId, isLoading, originalText) {
     }
 }
 
+function getAdminProfile(user) {
+    return firebase.firestore().collection('admin_users').doc(user.uid).get();
+}
+
+function createPendingAdminProfile(user) {
+    const profile = {
+        email: user.email || '',
+        displayName: user.displayName || '',
+        provider: user.providerData[0] ? user.providerData[0].providerId : 'password',
+        status: 'pending',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    return firebase.firestore().collection('admin_users').doc(user.uid).set(profile, { merge: true });
+}
+
+async function continueToDashboard(user) {
+    const profileSnapshot = await getAdminProfile(user);
+    if (!profileSnapshot.exists) {
+        await createPendingAdminProfile(user);
+        await firebase.auth().signOut();
+        showMsg('loginError', 'Your account is awaiting system administrator approval.');
+        return;
+    }
+
+    const profile = profileSnapshot.data();
+    if (profile.status !== 'approved') {
+        await firebase.auth().signOut();
+        showMsg('loginError', profile.status === 'rejected'
+            ? 'Your dashboard access request was not approved.'
+            : 'Your account is awaiting system administrator approval.');
+        return;
+    }
+
+    window.location.href = '../admin/dashboard.html';
+}
+
 function loginUser(e) {
     e.preventDefault();
     setLoading('loginBtn', true, '');
@@ -40,7 +78,7 @@ function loginUser(e) {
     const password = document.getElementById('loginPassword').value;
 
     firebase.auth().signInWithEmailAndPassword(email, password)
-        .then(() => { window.location.href = '../admin/dashboard.html'; })
+        .then(continueToDashboard)
         .catch(err => {
             showMsg('loginError', err.message);
             setLoading('loginBtn', false, 'Sign In');
@@ -54,7 +92,12 @@ function signupUser(e) {
     const password = document.getElementById('signupPassword').value;
 
     firebase.auth().createUserWithEmailAndPassword(email, password)
-        .then(() => { window.location.href = '../admin/dashboard.html'; })
+        .then(async userCredential => {
+            await createPendingAdminProfile(userCredential.user);
+            await firebase.auth().signOut();
+            switchView('loginView');
+            showMsg('loginError', 'Account created. A system administrator must approve it before dashboard access is enabled.');
+        })
         .catch(err => {
             showMsg('signupError', err.message);
             setLoading('signupBtn', false, 'Create Account');
@@ -64,7 +107,7 @@ function signupUser(e) {
 function loginWithGoogle() {
     const provider = new firebase.auth.GoogleAuthProvider();
     firebase.auth().signInWithPopup(provider)
-        .then(() => { window.location.href = '../admin/dashboard.html'; })
+        .then(continueToDashboard)
         .catch(err => {
             showMsg('loginError', err.message);
         });
@@ -111,8 +154,11 @@ function verifyPhoneCode() {
     btn.innerHTML = '<div class="spinner"></div>';
     btn.disabled = true;
 
-    confirmationResult.confirm(code).then(() => {
-        window.location.href = '../admin/dashboard.html';
+    confirmationResult.confirm(code).then(async userCredential => {
+        await createPendingAdminProfile(userCredential.user);
+        await firebase.auth().signOut();
+        switchView('loginView');
+        showMsg('loginError', 'Account verified. A system administrator must approve it before dashboard access is enabled.');
     }).catch(() => {
         showMsg('phoneError', "Invalid code. Please try again.");
         btn.innerText = 'Verify & Login';
@@ -137,5 +183,7 @@ function resetPassword(e) {
 }
 
 firebase.auth().onAuthStateChanged(user => {
-    if (user) window.location.href = '../admin/dashboard.html';
+    if (user && !user.isAnonymous) continueToDashboard(user).catch(err => {
+        showMsg('loginError', err.message);
+    });
 });

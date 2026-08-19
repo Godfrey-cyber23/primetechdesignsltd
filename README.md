@@ -97,6 +97,10 @@ The public site and admin pages initialize the Firebase project used by Primetec
 
 The browser configuration reference is stored at [docs/development/firebase-client-config.example.js](docs/development/firebase-client-config.example.js). The Firestore baseline rules are stored at [firestore.rules](firestore.rules); review and deploy them with Firebase CLI after configuring an `admin` custom claim for authorized dashboard users.
 
+### Dashboard Approval Flow
+
+Dashboard accounts are stored in `admin_users/{uid}`. Email, Google, and phone signups create a profile with `status: "pending"` and are signed out immediately. A trusted administrator must change that document to `status: "approved"` in the Firebase Console before the account can enter `admin/dashboard.html`. Anonymous Firebase Authentication must also be enabled for the public named live-chat flow.
+
 The project forms module uses these Firestore paths:
 
 ```text

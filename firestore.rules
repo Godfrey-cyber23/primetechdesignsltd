@@ -2,10 +2,27 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // The current application treats authenticated users as administrators.
-    // Replace this helper with a custom-claims check before production use.
+    // Authentication is required; approval status is enforced by
+    // isApprovedAdmin for dashboard operations.
     function isAdmin() {
       return request.auth != null;
+    }
+
+    // Dashboard accounts are approved manually by an administrator.
+    function isApprovedAdmin() {
+      return isAdmin()
+        && exists(/databases/$(database)/documents/admin_users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/admin_users/$(request.auth.uid)).data.status == 'approved';
+    }
+
+    match /admin_users/{userId} {
+      allow create: if isAdmin() && request.auth.uid == userId
+                    && request.resource.data.status == 'pending';
+      allow read: if isAdmin() && request.auth.uid == userId;
+        allow update: if isApprovedAdmin()
+              || (isAdmin() && request.auth.uid == userId
+                && request.resource.data.status == resource.data.status);
+      allow delete: if isApprovedAdmin();
     }
 
     // Contact submissions: visitors may create valid leads; administrators
@@ -14,7 +31,7 @@ service cloud.firestore {
       allow create: if request.resource.data.name is string
                     && request.resource.data.email is string
                     && request.resource.data.timestamp is timestamp;
-      allow read, update, delete: if isAdmin();
+      allow read, update, delete: if isApprovedAdmin();
     }
 
     // Public bot chat. Authenticated users may update or delete messages.
@@ -23,12 +40,12 @@ service cloud.firestore {
                     && request.resource.data.sender is string
                     && request.resource.data.timestamp is timestamp;
       allow read: if true;
-      allow update, delete: if isAdmin();
+      allow update, delete: if isApprovedAdmin();
 
       // Required by the dashboard's threaded chat view.
       match /replies/{replyId} {
         allow read: if true;
-        allow create, update, delete: if isAdmin();
+        allow create, update, delete: if isApprovedAdmin();
       }
     }
 
@@ -36,30 +53,30 @@ service cloud.firestore {
     // all projects and their project-form documents.
     match /projects/{projectId} {
       allow read: if resource.data.isPublished == true || isAdmin();
-      allow write: if isAdmin();
+      allow write: if isApprovedAdmin();
 
       match /forms/{formId} {
-        allow read, write: if isAdmin();
+        allow read, write: if isApprovedAdmin();
       }
     }
 
     match /team_members/{memberId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isApprovedAdmin();
     }
 
     match /site_settings/{documentId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isApprovedAdmin();
     }
 
     match /analytics/{documentId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isApprovedAdmin();
     }
 
     match /project_counters/{counterId} {
-      allow read, write: if isAdmin();
+      allow read, write: if isApprovedAdmin();
     }
 
     // Deny every collection not explicitly listed above.
