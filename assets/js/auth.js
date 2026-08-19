@@ -40,7 +40,7 @@ function loginUser(e) {
     const password = document.getElementById('loginPassword').value;
 
     firebase.auth().signInWithEmailAndPassword(email, password)
-        .then(() => { window.location.href = 'index.html'; })
+        .then(() => { window.location.href = '../admin/dashboard.html'; })
         .catch(err => {
             showMsg('loginError', err.message);
             setLoading('loginBtn', false, 'Sign In');
@@ -54,7 +54,7 @@ function signupUser(e) {
     const password = document.getElementById('signupPassword').value;
 
     firebase.auth().createUserWithEmailAndPassword(email, password)
-        .then(() => { window.location.href = 'index.html'; })
+        .then(() => { window.location.href = '../admin/dashboard.html'; })
         .catch(err => {
             showMsg('signupError', err.message);
             setLoading('signupBtn', false, 'Create Account');
@@ -64,7 +64,7 @@ function signupUser(e) {
 function loginWithGoogle() {
     const provider = new firebase.auth.GoogleAuthProvider();
     firebase.auth().signInWithPopup(provider)
-        .then(() => { window.location.href = 'index.html'; })
+        .then(() => { window.location.href = '../admin/dashboard.html'; })
         .catch(err => {
             showMsg('loginError', err.message);
         });
@@ -112,7 +112,7 @@ function verifyPhoneCode() {
     btn.disabled = true;
 
     confirmationResult.confirm(code).then(() => {
-        window.location.href = 'index.html';
+        window.location.href = '../admin/dashboard.html';
     }).catch(() => {
         showMsg('phoneError', "Invalid code. Please try again.");
         btn.innerText = 'Verify & Login';
@@ -137,5 +137,5 @@ function resetPassword(e) {
 }
 
 firebase.auth().onAuthStateChanged(user => {
-    if (user) window.location.href = 'index.html';
+    if (user) window.location.href = '../admin/dashboard.html';
 });

@@ -1,0 +1,66 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // Replace this with a custom-claims check before production use.
+    function isAdmin() {
+      return signedIn() && request.auth.token.admin == true;
+    }
+
+    // Public content required by the portfolio site.
+    match /site_settings/general {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /team_members/{memberId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /projects/{projectId} {
+      allow read: if resource.data.isPublished == true || isAdmin();
+      allow create, update, delete: if isAdmin();
+
+      match /forms/{formId} {
+        allow read, write: if isAdmin();
+      }
+    }
+
+    // Visitors may submit a lead, but only administrators may read or manage it.
+    match /contact_submissions/{submissionId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Analytics and internal communication are administrator-only.
+    match /analytics/{documentId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /chats/{chatId} {
+      allow read, write: if isAdmin();
+
+      match /messages/{messageId} {
+        allow read, write: if isAdmin();
+
+        match /replies/{replyId} {
+          allow read, write: if isAdmin();
+        }
+      }
+    }
+
+    match /project_counters/{counterId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Deny every collection not explicitly listed above.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
