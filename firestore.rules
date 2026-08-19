@@ -2,19 +2,45 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    function signedIn() {
+    // The current application treats authenticated users as administrators.
+    // Replace this helper with a custom-claims check before production use.
+    function isAdmin() {
       return request.auth != null;
     }
 
-    // Replace this with a custom-claims check before production use.
-    function isAdmin() {
-      return signedIn() && request.auth.token.admin == true;
+    // Contact submissions: visitors may create valid leads; administrators
+    // may read and manage them.
+    match /contact_submissions/{submissionId} {
+      allow create: if request.resource.data.name is string
+                    && request.resource.data.email is string
+                    && request.resource.data.timestamp is timestamp;
+      allow read, update, delete: if isAdmin();
     }
 
-    // Public content required by the portfolio site.
-    match /site_settings/general {
+    // Public bot chat. Authenticated users may update or delete messages.
+    match /chats/{chatId}/messages/{messageId} {
+      allow create: if request.resource.data.text is string
+                    && request.resource.data.sender is string
+                    && request.resource.data.timestamp is timestamp;
       allow read: if true;
+      allow update, delete: if isAdmin();
+
+      // Required by the dashboard's threaded chat view.
+      match /replies/{replyId} {
+        allow read: if true;
+        allow create, update, delete: if isAdmin();
+      }
+    }
+
+    // Public visitors can read published projects. Administrators can manage
+    // all projects and their project-form documents.
+    match /projects/{projectId} {
+      allow read: if resource.data.isPublished == true || isAdmin();
       allow write: if isAdmin();
+
+      match /forms/{formId} {
+        allow read, write: if isAdmin();
+      }
     }
 
     match /team_members/{memberId} {
@@ -22,36 +48,14 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    match /projects/{projectId} {
-      allow read: if resource.data.isPublished == true || isAdmin();
-      allow create, update, delete: if isAdmin();
-
-      match /forms/{formId} {
-        allow read, write: if isAdmin();
-      }
+    match /site_settings/{documentId} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
-    // Visitors may submit a lead, but only administrators may read or manage it.
-    match /contact_submissions/{submissionId} {
-      allow create: if true;
-      allow read, update, delete: if isAdmin();
-    }
-
-    // Analytics and internal communication are administrator-only.
     match /analytics/{documentId} {
-      allow read, write: if isAdmin();
-    }
-
-    match /chats/{chatId} {
-      allow read, write: if isAdmin();
-
-      match /messages/{messageId} {
-        allow read, write: if isAdmin();
-
-        match /replies/{replyId} {
-          allow read, write: if isAdmin();
-        }
-      }
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     match /project_counters/{counterId} {

@@ -131,7 +131,7 @@ Firebase client configuration values are not a replacement for access control. B
 - Review file-upload permissions and validate uploaded file types and sizes.
 - Treat project-form contract language as a draft until it has been legally reviewed.
 
-The committed rules intentionally keep client chat administrator-only. The current public chat widget should be adapted to use a dedicated, privacy-reviewed public messaging flow before public chat persistence is enabled.
+The committed rules allow public reads and creates for the current bot-chat flow, while restricting message edits and deletes to authenticated users. Because the current helper treats every authenticated user as an administrator, replace it with a custom-claims check before production use.
 
 The project notes in [docs/administration/project-forms.md](docs/administration/project-forms.md) include additional warnings for the project forms module.
 
