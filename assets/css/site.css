@@ -1914,6 +1914,19 @@
                 scroll-snap-align: start;
             }
 
+            .insights-grid {
+                display: flex;
+                flex-direction: row;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+            }
+
+            .insights-grid .insight-card {
+                flex: 0 0 min(82vw, 300px);
+                width: min(82vw, 300px);
+                scroll-snap-align: start;
+            }
+
             .tech-grid > * {
                 flex-basis: 100px;
             }
