@@ -47,7 +47,8 @@
                     '.process-grid',
                     '.tech-grid',
                     '.testimonial-grid',
-                    '.insights-grid'
+                    '.insights-grid',
+                    '.faq-container'
                 ];
                 const carousels = carouselSelectors
                     .map(selector => document.querySelector(selector))

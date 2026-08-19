@@ -979,6 +979,7 @@
             border-radius: 12px;
             overflow: hidden;
             transition: all 0.3s ease;
+            flex-shrink: 0;
         }
 
         .faq-item:hover {
@@ -1887,7 +1888,8 @@
             .tech-grid,
             .testimonial-grid,
             .insights-grid,
-            .projects-slider-container {
+            .projects-slider-container,
+            .faq-container {
                 display: flex;
                 flex-wrap: nowrap;
                 gap: 14px;
@@ -1905,7 +1907,8 @@
             .tech-grid > *,
             .testimonial-grid > *,
             .insights-grid > *,
-            .projects-slider-container > * {
+            .projects-slider-container > *,
+            .faq-container > * {
                 flex: 0 0 min(82vw, 300px);
                 scroll-snap-align: start;
             }
