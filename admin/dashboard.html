@@ -88,6 +88,15 @@
                     <button class="nav-item" onclick="switchView('myProfile', this)"><i class="fas fa-id-badge"></i> <span>My Profile</span></button>
                 </div>
             </div>
+            <div class="nav-group" id="adminControlsNav" style="display:none;">
+                <button class="nav-section-title" onclick="toggleNavGroup(this)" aria-expanded="true">
+                    <span>Administration</span><i class="fas fa-chevron-down"></i>
+                </button>
+                <div class="nav-group-items">
+                    <button class="nav-item" onclick="switchView('adminControls', this)"><i class="fas fa-shield-halved"></i>
+                        <span>Admin Command Center</span><span class="badge" id="pendingAdminBadge">0</span></button>
+                </div>
+            </div>
         </div>
 
         <div class="sidebar-footer">
@@ -659,6 +668,40 @@
 
         </div>
 
+
+        <!-- ADMIN COMMAND CENTER -->
+        <div id="adminControls" class="view">
+            <div class="card">
+                <div class="card-title"><span><i class="fas fa-shield-halved"></i> Admin Command Center</span></div>
+                <p class="form-help">Approve access requests, control member roles, and coordinate internal work.</p>
+            </div>
+            <div class="grid-2" style="margin-top:20px;">
+                <div class="card">
+                    <div class="card-title"><span><i class="fas fa-user-clock"></i> Access Requests</span></div>
+                    <div id="adminApprovalList"><p class="form-help">Loading requests...</p></div>
+                </div>
+                <div class="card">
+                    <div class="card-title"><span><i class="fas fa-list-check"></i> Assign a Task</span></div>
+                    <form onsubmit="createAdminTask(event)">
+                        <div class="form-group"><label for="taskTitle">Task title</label><input id="taskTitle" required maxlength="120"></div>
+                        <div class="form-group"><label for="taskDescription">Details</label><textarea id="taskDescription" rows="3" maxlength="1000"></textarea></div>
+                        <div class="grid-2-equal">
+                            <div class="form-group"><label for="taskAssignee">Assign to</label><select id="taskAssignee" required></select></div>
+                            <div class="form-group"><label for="taskDueDate">Due date</label><input type="date" id="taskDueDate"></div>
+                        </div>
+                        <button type="submit" class="btn-primary"><i class="fas fa-paper-plane"></i> Assign Task</button>
+                    </form>
+                </div>
+            </div>
+            <div class="card" style="margin-top:20px;">
+                <div class="card-title"><span><i class="fas fa-clipboard-list"></i> Task Oversight</span></div>
+                <div id="adminTaskList"><p class="form-help">Loading tasks...</p></div>
+            </div>
+            <div class="card" style="margin-top:20px;">
+                <div class="card-title"><span><i class="fas fa-history"></i> Recent Admin Activity</span></div>
+                <div id="adminAuditList"><p class="form-help">Loading activity...</p></div>
+            </div>
+        </div>
 
         <!-- MY PROFILE -->
         <div id="myProfile" class="view">

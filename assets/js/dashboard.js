@@ -29,6 +29,8 @@ let teamPresence = {};
 let activePresenceListener = null;
 let presenceHeartbeat = null;
 let messagePriority = false;
+let authenticatedAdminProfile = null;
+let isSuperAdmin = false;
 
 // === TOAST ===
 function showToast(msg) {
@@ -94,7 +96,8 @@ function switchView(viewId, btn) {
         portfolio: ['Portfolio Manager', 'Publish and maintain your public work.'],
         siteSettings: ['Website Settings', 'Update global site content dynamically.'],
         team: ['Team Directory', 'View approved admins and their availability.'],
-        myProfile: ['My Profile', 'Update your personal and team directory information.']
+        myProfile: ['My Profile', 'Update your personal and team directory information.'],
+        adminControls: ['Admin Command Center', 'Control access, roles, tasks, and internal accountability.']
     };
     document.getElementById('pageTitle').innerText = titles[viewId][0];
     document.getElementById('pageSubtitle').innerText = titles[viewId][1];
@@ -596,6 +599,118 @@ async function saveAdminProfile(event) {
     } catch (error) {
         showToast('Could not save profile: ' + error.message);
     }
+}
+
+function formatAdminDate(value) {
+    return value && value.toDate ? value.toDate().toLocaleString() : 'Just now';
+}
+
+function recordAdminAudit(action, targetId, details) {
+    return db.collection('admin_audit_logs').add({
+        action, targetId: targetId || '', details: details || '',
+        actorId: authenticatedAdmin.uid, actorEmail: authenticatedAdmin.email || '',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+}
+
+function loadAdminCommandCenter() {
+    if (!isSuperAdmin) return;
+
+    db.collection('admin_users').onSnapshot(snapshot => {
+        const members = snapshot.docs.map(doc => ({ ...doc.data(), uid: doc.id }));
+        const pending = members.filter(member => member.status === 'pending');
+        const managed = members.filter(member => member.uid !== BOOTSTRAP_ADMIN_UID && ['approved', 'suspended'].includes(member.status));
+        document.getElementById('pendingAdminBadge').innerText = pending.length;
+        const pendingMarkup = pending.length ? pending.map(member => `
+            <div class="list-item" style="align-items:flex-start; gap:12px;">
+                <div class="list-info"><h4>${escapeHtml(member.displayName || member.email || 'New member')}</h4>
+                    <p>${escapeHtml(member.email || '')} · Requested ${formatAdminDate(member.createdAt)}</p></div>
+                <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;">
+                    <select id="approval-role-${member.uid}" aria-label="Role for ${escapeHtml(member.email || 'member')}">
+                        <option value="member">Member</option><option value="manager">Manager</option><option value="admin">Admin</option>
+                    </select>
+                    <button class="btn-success" onclick="reviewAdmin('${member.uid}', 'approved')" title="Approve account"><i class="fas fa-check"></i></button>
+                    <button class="btn-danger" onclick="reviewAdmin('${member.uid}', 'rejected')" title="Reject account"><i class="fas fa-xmark"></i></button>
+                </div>
+            </div>`).join('') : '<p class="form-help">No pending account requests.</p>';
+        const managedMarkup = managed.length ? `<h4 style="margin:20px 0 8px;">Current members</h4>${managed.map(member => `
+            <div class="list-item" style="align-items:flex-start; gap:12px;">
+                <div class="list-info"><h4>${escapeHtml(member.displayName || member.email || 'Member')}</h4><p>${escapeHtml(member.email || '')} · ${escapeHtml(member.status)}</p></div>
+                <select onchange="updateAdminMember('${member.uid}', this.value)">
+                    ${['member', 'manager', 'admin'].map(role => `<option value="${role}" ${member.role === role ? 'selected' : ''}>${role}</option>`).join('')}
+                </select>
+                <button class="${member.status === 'suspended' ? 'btn-success' : 'btn-danger'}" onclick="updateAdminMember('${member.uid}', '${member.status === 'suspended' ? 'approved' : 'suspended'}')" title="${member.status === 'suspended' ? 'Restore access' : 'Suspend access'}"><i class="fas fa-${member.status === 'suspended' ? 'rotate-left' : 'ban'}"></i></button>
+            </div>`).join('')}` : '';
+        document.getElementById('adminApprovalList').innerHTML = pendingMarkup + managedMarkup;
+
+        const approved = members.filter(member => member.status === 'approved' || member.status === 'suspended');
+        document.getElementById('taskAssignee').innerHTML = approved.length
+            ? approved.map(member => `<option value="${member.uid}" ${member.status === 'suspended' ? 'disabled' : ''}>${escapeHtml(member.displayName || member.email || member.uid)}${member.status === 'suspended' ? ' (suspended)' : ''}</option>`).join('')
+            : '<option value="">No approved members</option>';
+    }, error => showToast('Could not load admin accounts: ' + error.message));
+
+    db.collection('tasks').onSnapshot(snapshot => {
+        const tasks = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+        document.getElementById('adminTaskList').innerHTML = tasks.length ? tasks.map(task => `
+            <div class="list-item"><div class="list-info"><h4>${escapeHtml(task.title || 'Untitled task')}</h4>
+                <p>${escapeHtml(task.description || 'No details')} · Assigned to ${escapeHtml(task.assigneeName || task.assignedTo || 'Unassigned')}</p></div>
+                <span class="directory-status">${escapeHtml(task.status || 'open')}${task.dueDate ? ` · due ${escapeHtml(task.dueDate)}` : ''}</span>
+                <button class="btn-danger" onclick="deleteAdminTask('${task.id}')" title="Delete task"><i class="fas fa-trash"></i></button></div>`).join('') : '<p class="form-help">No tasks assigned yet.</p>';
+    }, error => showToast('Could not load tasks: ' + error.message));
+
+    db.collection('admin_audit_logs').limit(25).onSnapshot(snapshot => {
+        const logs = snapshot.docs.map(doc => doc.data());
+        document.getElementById('adminAuditList').innerHTML = logs.length ? logs.map(log => `
+            <div class="list-item"><div class="list-info"><h4>${escapeHtml(log.action || 'Administrative action')}</h4>
+                <p>${escapeHtml(log.details || '')} · ${escapeHtml(log.actorEmail || 'System')} · ${formatAdminDate(log.createdAt)}</p></div></div>`).join('') : '<p class="form-help">No administrative activity recorded.</p>';
+    }, error => showToast('Could not load audit history: ' + error.message));
+}
+
+async function reviewAdmin(uid, status) {
+    if (!isSuperAdmin) return;
+    const role = document.getElementById(`approval-role-${uid}`)?.value || 'member';
+    try {
+        await db.collection('admin_users').doc(uid).update({ status, role, reviewedBy: authenticatedAdmin.uid, reviewedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+        await recordAdminAudit(status === 'approved' ? 'Approved admin account' : 'Rejected admin account', uid, `${role} role`);
+        showToast(status === 'approved' ? 'Account approved.' : 'Account rejected.');
+    } catch (error) { showToast('Could not review account: ' + error.message); }
+}
+
+async function updateAdminMember(uid, value) {
+    if (!isSuperAdmin || uid === BOOTSTRAP_ADMIN_UID) return;
+    const update = ['approved', 'suspended'].includes(value) ? { status: value } : { role: value };
+    try {
+        await db.collection('admin_users').doc(uid).update({ ...update, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+        await recordAdminAudit(update.status ? `${update.status === 'suspended' ? 'Suspended' : 'Restored'} admin access` : 'Updated admin role', uid, update.role || '');
+        showToast('Member access updated.');
+    } catch (error) { showToast('Could not update member: ' + error.message); }
+}
+
+async function createAdminTask(event) {
+    event.preventDefault();
+    if (!isSuperAdmin) return;
+    const assignee = document.getElementById('taskAssignee');
+    const assigneeName = assignee.options[assignee.selectedIndex]?.textContent || '';
+    try {
+        const task = await db.collection('tasks').add({
+            title: document.getElementById('taskTitle').value.trim(),
+            description: document.getElementById('taskDescription').value.trim(),
+            assignedTo: assignee.value, assigneeName, dueDate: document.getElementById('taskDueDate').value,
+            status: 'open', createdBy: authenticatedAdmin.uid, createdAt: firebase.firestore.FieldValue.serverTimestamp(), updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        await recordAdminAudit('Created task', task.id, `Assigned to ${assigneeName}`);
+        event.target.reset();
+        showToast('Task assigned.');
+    } catch (error) { showToast('Could not assign task: ' + error.message); }
+}
+
+async function deleteAdminTask(taskId) {
+    if (!isSuperAdmin) return;
+    try {
+        await db.collection('tasks').doc(taskId).delete();
+        await recordAdminAudit('Deleted task', taskId, 'Task removed by super admin');
+        showToast('Task deleted.');
+    } catch (error) { showToast('Could not delete task: ' + error.message); }
 }
 
 // ==========================================
@@ -2257,6 +2372,10 @@ firebase.auth().onAuthStateChanged(async user => {
         }
 
         authenticatedAdmin = user;
+    authenticatedAdminProfile = profile || { status: 'approved' };
+    isSuperAdmin = user.uid === BOOTSTRAP_ADMIN_UID;
+    document.getElementById('adminControlsNav').style.display = isSuperAdmin ? '' : 'none';
+    if (isSuperAdmin) loadAdminCommandCenter();
         loadAdminProfile().catch(error => console.warn('Could not load admin profile:', error.message));
         loadTeamDirectory();
         document.getElementById('teamPresenceName').innerText = user.displayName || adminName;

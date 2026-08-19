@@ -99,7 +99,9 @@ The browser configuration reference is stored at [docs/development/firebase-clie
 
 ### Dashboard Approval Flow
 
-Dashboard accounts are stored in `admin_users/{uid}`. Email, Google, and phone signups create a profile with `status: "pending"` and are signed out immediately. A trusted administrator must change that document to `status: "approved"` in the Firebase Console before the account can enter `admin/dashboard.html`. Anonymous Firebase Authentication must also be enabled for the public named live-chat flow.
+Dashboard accounts are stored in `admin_users/{uid}`. Email, Google, and phone signups create a profile with `status: "pending"` and are signed out immediately. The bootstrap administrator can approve or reject requests, assign roles, suspend or restore members, and review activity from the Admin Command Center before an account can enter `admin/dashboard.html`. Anonymous Firebase Authentication must also be enabled for the public named live-chat flow.
+
+The Admin Command Center also stores assigned work in `tasks/{taskId}` and immutable administrative activity in `admin_audit_logs/{logId}`. Only the bootstrap administrator can create or delete tasks, change member access, or write audit entries; approved members can read tasks and update the status of tasks assigned to them.
 
 The initial system administrator is the Firebase user with UID `sJSLqnZTFvcnubHnNyl1NJlMHy52` (`godfreyb998@gmail.com`). This UID is treated as the bootstrap administrator by the client approval flow and Firestore rules. Remove or replace this bootstrap exception after a permanent administrator-claims workflow is established.
 

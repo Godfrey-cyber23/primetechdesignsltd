@@ -13,6 +13,10 @@ service cloud.firestore {
         && request.auth.uid == 'sJSLqnZTFvcnubHnNyl1NJlMHy52';
     }
 
+    function isSuperAdmin() {
+      return isBootstrapAdmin();
+    }
+
     // Dashboard accounts are approved manually by an administrator.
     function isApprovedAdmin() {
       return isBootstrapAdmin()
@@ -25,10 +29,29 @@ service cloud.firestore {
       allow create: if isAdmin() && request.auth.uid == userId
                     && (request.resource.data.status == 'pending' || isBootstrapAdmin());
       allow read: if isApprovedAdmin();
-      allow update: if isApprovedAdmin()
+      allow update: if isSuperAdmin()
               || (isAdmin() && request.auth.uid == userId
-                && request.resource.data.status == resource.data.status);
-      allow delete: if isApprovedAdmin();
+                && request.resource.data.status == resource.data.status
+                && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                  'displayName', 'jobTitle', 'phone', 'photoURL', 'bio', 'updatedAt'
+                ]));
+      allow delete: if isSuperAdmin();
+    }
+
+    match /tasks/{taskId} {
+      allow read: if isApprovedAdmin();
+      allow create, delete: if isSuperAdmin();
+      allow update: if isSuperAdmin()
+                    || (isApprovedAdmin()
+                        && resource.data.assignedTo == request.auth.uid
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                          'status', 'updatedAt'
+                        ]));
+    }
+
+    match /admin_audit_logs/{logId} {
+      allow read, create: if isSuperAdmin();
+      allow update, delete: if false;
     }
 
     match /team_presence/{userId} {
