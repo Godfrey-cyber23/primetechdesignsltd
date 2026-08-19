@@ -27,6 +27,7 @@
                 publicChatUser = result.user;
                 return publicChatUser;
             });
+            return publicChatAuthPromise;
         }
 
   
@@ -693,7 +694,9 @@
                     }
                 } catch (error) {
                     console.error('Chat setup error:', error);
-                    lcNameError.textContent = 'Chat is temporarily unavailable. Please try again.';
+                    lcNameError.textContent = error.code === 'auth/admin-restricted-operation'
+                        ? 'Anonymous chat access is not enabled yet. Please try again later.'
+                        : 'Chat is temporarily unavailable. Please try again.';
                 } finally {
                     submitButton.disabled = false;
                 }
@@ -831,7 +834,10 @@
                     }
                 } catch (error) {
                     console.error('Message send error:', error);
-                    renderMessage({ text: 'Your message could not be sent. Please try again.', sender: 'bot', time: getTime() });
+                    const message = error.code === 'auth/admin-restricted-operation'
+                        ? 'Chat setup is not enabled yet. Please try again later.'
+                        : 'Your message could not be sent. Please try again.';
+                    renderMessage({ text: message, sender: 'bot', time: getTime() });
                 }
             }
 
