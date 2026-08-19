@@ -32,8 +32,11 @@ service cloud.firestore {
     }
 
     match /clients/{clientId} {
-      allow create, update: if request.auth != null
-                            && request.auth.uid == clientId;
+      allow create: if request.auth != null
+                    && request.auth.uid == clientId;
+      allow update: if isApprovedAdmin()
+                    || (request.auth != null && request.auth.uid == clientId
+                        && request.resource.data.status == resource.data.status);
       allow read, delete: if isApprovedAdmin();
     }
 
@@ -56,7 +59,10 @@ service cloud.firestore {
                     && request.resource.data.sender is string
                     && request.resource.data.timestamp is timestamp;
       allow read: if true;
-      allow update, delete: if isApprovedAdmin();
+      allow update: if isApprovedAdmin()
+                    || (isAdmin()
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions']));
+      allow delete: if isApprovedAdmin();
 
       // Required by the dashboard's threaded chat view.
       match /replies/{replyId} {

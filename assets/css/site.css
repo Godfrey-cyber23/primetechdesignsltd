@@ -2544,6 +2544,55 @@
             display: block;
         }
 
+        .lc-reactions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 6px;
+        }
+
+        .lc-reaction-pill {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2px 6px;
+            background: var(--surface);
+            color: var(--text);
+            cursor: pointer;
+            font: inherit;
+            font-size: 0.68rem;
+        }
+
+        .lc-reaction-pill:hover {
+            border-color: var(--accent);
+        }
+
+        .lc-reaction-picker {
+            display: flex;
+            gap: 3px;
+            margin-top: 4px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .lc-msg:hover .lc-reaction-picker,
+        .lc-msg:focus-within .lc-reaction-picker {
+            opacity: 1;
+        }
+
+        .lc-reaction-picker button {
+            padding: 1px 3px;
+            border: 0;
+            background: transparent;
+            cursor: pointer;
+            font-size: 0.78rem;
+        }
+
+        @media (hover: none) {
+            .lc-reaction-picker {
+                opacity: 1;
+            }
+        }
+
         .lc-typing {
             align-self: flex-start;
             background: var(--surface-2);

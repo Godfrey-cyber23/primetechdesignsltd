@@ -651,6 +651,17 @@ function renderMessage(doc, msgArea, type) {
             `;
     msgArea.appendChild(wrapper);
 
+    let touchStartX = null;
+    wrapper.addEventListener('touchstart', event => {
+        touchStartX = event.changedTouches[0].clientX;
+    }, { passive: true });
+    wrapper.addEventListener('touchend', event => {
+        if (touchStartX === null) return;
+        const distance = event.changedTouches[0].clientX - touchStartX;
+        touchStartX = null;
+        if (distance > 60) openThread(msgId);
+    }, { passive: true });
+
     if (m.reactions) {
         const reactArea = wrapper.querySelector(`#reactions_${msgId}`);
         Object.keys(m.reactions).forEach(emoji => {
@@ -714,22 +725,11 @@ function openThread(msgId) {
     const threadArea = document.getElementById('threadMessages');
     threadArea.innerHTML = '<div style="text-align:center; color:var(--text-muted);">Loading thread...</div>';
 
-    db.collection('chats').doc(currentChatId).collection('messages').doc(msgId).get().then(doc => {
-        const m = doc.data();
-        const senderName = m.senderName || m.sender || 'Visitor';
-        const time = m.timestamp ? new Date(m.timestamp.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '...';
-        threadArea.innerHTML = `
-                    <div class="message-wrapper received" style="max-width: 100%; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 15px;">
-                        <div class="message-info"><strong>${senderName}</strong> <span>${time}</span></div>
-                        <div class="message">${formatMessage(m.text)}</div>
-                    </div>
-                `;
-    });
-
-    activeThreadListener = db.collection('chats').doc(currentChatId).collection('messages').doc(msgId).collection('replies').orderBy('timestamp', 'asc').onSnapshot(snapshot => {
-        const parentHTML = threadArea.innerHTML.split('<div class="message-wrapper sent"')[0];
+    const listenForReplies = () => db.collection('chats').doc(currentChatId).collection('messages').doc(msgId).collection('replies').orderBy('timestamp', 'asc').onSnapshot(snapshot => {
+        const repliesArea = document.getElementById('threadReplies');
+        if (!repliesArea) return;
         if (snapshot.empty) {
-            threadArea.innerHTML = parentHTML + '<div style="text-align:center; color:var(--text-muted); margin-top:10px;">No replies yet.</div>';
+            repliesArea.innerHTML = '<div style="text-align:center; color:var(--text-muted); margin-top:10px;">No replies yet.</div>';
             return;
         }
         let repliesHTML = '';
@@ -744,8 +744,27 @@ function openThread(msgId) {
                             <div class="message">${formatMessage(r.text)}</div>
                         </div>`;
         });
-        threadArea.innerHTML = parentHTML + repliesHTML;
+        repliesArea.innerHTML = repliesHTML;
         threadArea.scrollTop = threadArea.scrollHeight;
+    });
+
+    db.collection('chats').doc(currentChatId).collection('messages').doc(msgId).get().then(doc => {
+        if (!doc.exists) return;
+        const m = doc.data();
+        const senderName = m.senderName || m.sender || 'Visitor';
+        const time = m.timestamp ? new Date(m.timestamp.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '...';
+        threadArea.innerHTML = `
+            <div class="thread-parent-message">
+                <div class="thread-parent-label"><i class="fas fa-reply"></i> Replying to ${senderName}</div>
+                <div class="message-info"><strong>${senderName}</strong> <span>${time}</span></div>
+                <div class="message">${formatMessage(m.text)}</div>
+            </div>
+            <div id="threadReplies" class="thread-replies"></div>
+        `;
+        activeThreadListener = listenForReplies();
+    }).catch(error => {
+        console.error('Thread parent error:', error);
+        threadArea.innerHTML = '<div style="color:var(--danger);">Unable to load the selected message.</div>';
     });
 }
 

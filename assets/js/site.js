@@ -739,9 +739,39 @@
             function renderMessage(msg) {
                 const el = document.createElement('div');
                 el.className = 'lc-msg lc-msg--' + msg.sender;
-                el.innerHTML = msg.text.replace(/\n/g, '<br>') + '<span class="lc-msg__time">' + msg.time + '</span>';
+                const reactions = Object.entries(msg.reactions || {}).map(([emoji, users]) => `
+                    <button class="lc-reaction-pill" type="button" data-emoji="${emoji}">
+                        ${emoji} <span>${users.length}</span>
+                    </button>`).join('');
+                el.innerHTML = msg.text.replace(/\n/g, '<br>')
+                    + '<span class="lc-msg__time">' + msg.time + '</span>'
+                    + `<div class="lc-reactions">${reactions}</div>`
+                    + `<div class="lc-reaction-picker">
+                        <button type="button" data-emoji="👍" aria-label="React with thumbs up">👍</button>
+                        <button type="button" data-emoji="❤️" aria-label="React with heart">❤️</button>
+                        <button type="button" data-emoji="🎉" aria-label="React with celebration">🎉</button>
+                    </div>`;
+                el.querySelectorAll('.lc-reaction-pill').forEach(button => {
+                    button.addEventListener('click', () => addPublicReaction(msg.id, button.dataset.emoji));
+                });
+                el.querySelectorAll('.lc-reaction-picker button').forEach(button => {
+                    button.addEventListener('click', () => addPublicReaction(msg.id, button.dataset.emoji));
+                });
                 lcMessages.appendChild(el);
                 lcMessages.scrollTop = lcMessages.scrollHeight;
+            }
+
+            async function addPublicReaction(messageId, emoji) {
+                try {
+                    const visitor = await ensurePublicChatUser();
+                    const messageRef = db.collection('chats').doc('client_' + visitor.uid)
+                        .collection('messages').doc(messageId);
+                    await messageRef.set({
+                        reactions: { [emoji]: firebase.firestore.FieldValue.arrayUnion(publicChatName || 'Visitor') }
+                    }, { merge: true });
+                } catch (error) {
+                    console.error('Reaction error:', error);
+                }
             }
 
             function showTyping() {
@@ -794,7 +824,7 @@
                     showNameGate(text);
                     return;
                 }
-                renderMessage({ text: text, sender: 'user', time: getTime() });
+                        renderMessage({ text: text, sender: 'user', time: getTime(), id: 'pending-' + Date.now() });
                 try {
                     const visitor = await ensurePublicChatUser();
                     const chatId = 'client_' + visitor.uid;
@@ -856,10 +886,10 @@
                         const m = doc.data();
                         const time = m.timestamp ? new Date(m.timestamp.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '...';
                         const sender = (m.sender === "Client") ? 'user' : 'bot';
-                        renderMessage({ text: m.text, sender: sender, time: time });
+                        renderMessage({ text: m.text, sender: sender, time: time, id: doc.id, reactions: m.reactions });
                     });
                     if (snapshot.empty) {
-                        renderMessage({ text: "Hi there! 👋 Welcome to Primetech Designs. How can we help you today?", sender: 'bot', time: getTime() });
+                        renderMessage({ text: "Hi there! 👋 Welcome to Primetech Designs. How can we help you today?", sender: 'bot', time: getTime(), id: 'welcome' });
                         setTimeout(showQuickReplies, 600);
                     }
                 }, error => {
@@ -867,7 +897,7 @@
                 });
             }
 
-            renderMessage({ text: "Hi there! 👋 Welcome to Primetech Designs. How can we help you today?", sender: 'bot', time: getTime() });
+            renderMessage({ text: "Hi there! 👋 Welcome to Primetech Designs. How can we help you today?", sender: 'bot', time: getTime(), id: 'welcome' });
             setTimeout(showQuickReplies, 600);
 
             if (publicChatName) {
