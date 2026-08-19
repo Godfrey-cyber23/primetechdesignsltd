@@ -11,7 +11,6 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 
 const BOOTSTRAP_ADMIN_UID = 'sJSLqnZTFvcnubHnNyl1NJlMHy52';
-const MAX_LOGIN_ATTEMPTS = 3;
 let authRedirectInProgress = false;
 
 function switchView(viewId) {
@@ -39,18 +38,6 @@ function authErrorMessage(error) {
         'auth/network-request-failed': 'Network error. Check your connection and try again.'
     };
     return messages[error.code] || error.message || 'Authentication failed. Please try again.';
-}
-
-function loginAttemptKey(email) {
-    return `primetech-login-attempts:${email.trim().toLowerCase()}`;
-}
-
-function getLoginAttempts(email) {
-    return Number.parseInt(localStorage.getItem(loginAttemptKey(email)) || '0', 10) || 0;
-}
-
-function clearLoginAttempts(email) {
-    localStorage.removeItem(loginAttemptKey(email));
 }
 
 function setLoading(buttonId, isLoading, originalText) {
@@ -131,20 +118,14 @@ function loginUser(e) {
     e.preventDefault();
     const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value;
-    const attempts = getLoginAttempts(email);
     setLoading('loginBtn', true, 'Sign In');
 
     firebase.auth().signInWithEmailAndPassword(email, password)
         .then(userCredential => {
-            clearLoginAttempts(email);
             return continueToDashboard(userCredential.user);
         })
         .catch(err => {
-            const nextAttempts = getLoginAttempts(email) + 1;
-            localStorage.setItem(loginAttemptKey(email), String(nextAttempts));
-            showMsg('loginError', nextAttempts >= MAX_LOGIN_ATTEMPTS
-                ? 'Three failed attempts were recorded in this browser. Firebase will enforce any server-side rate limit; try again after the administrator unlocks the account.'
-                : `${authErrorMessage(err)} ${MAX_LOGIN_ATTEMPTS - nextAttempts} attempt(s) remaining.`);
+            showMsg('loginError', authErrorMessage(err));
             setLoading('loginBtn', false, 'Sign In');
             authRedirectInProgress = false;
         });

@@ -103,7 +103,7 @@ Dashboard accounts are stored in `admin_users/{uid}`. Email, Google, and phone s
 
 The Admin Command Center also stores assigned work in `tasks/{taskId}` and immutable administrative activity in `admin_audit_logs/{logId}`. Only the bootstrap administrator can create or delete tasks, change member access, or write audit entries; approved members can read tasks and update the status of tasks assigned to them.
 
-Administration requires Firebase password reauthentication and the dashboard signs out after 15 minutes without activity. Login shows three-attempt lock feedback and honors `admin_users/{uid}.loginLocked`; the super administrator can clear that field from the Command Center. A durable lock triggered by failed credentials must be implemented in a trusted Firebase Cloud Function using the Admin SDK, because unauthenticated browser code cannot safely update an account after a failed password attempt.
+Administration requires Firebase password reauthentication and the dashboard signs out after 15 minutes without activity. Login displays Firebase authentication errors and honors `admin_users/{uid}.loginLocked` and `loginStatus`; the super administrator can clear those fields from the Command Center. Login throttling and durable lockouts must be enforced by Firebase or a trusted Cloud Function using the Admin SDK, never by browser-side counters.
 
 The initial system administrator is the Firebase user with UID `sJSLqnZTFvcnubHnNyl1NJlMHy52` (`godfreyb998@gmail.com`). This UID is treated as the bootstrap administrator by the client approval flow and Firestore rules. Remove or replace this bootstrap exception after a permanent administrator-claims workflow is established.
 
