@@ -16,14 +16,19 @@
         let publicChatListenerStarted = false;
         let publicChatAuthPromise = null;
 
-        function ensurePublicChatUser() {
+        const publicChatPersistenceReady = firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+            .catch(error => {
+                console.error('Chat persistence setup error:', error);
+            });
+
+        async function ensurePublicChatUser() {
             if (publicChatUser) return Promise.resolve(publicChatUser);
             if (firebase.auth().currentUser && firebase.auth().currentUser.isAnonymous) {
                 publicChatUser = firebase.auth().currentUser;
                 return Promise.resolve(publicChatUser);
             }
             if (publicChatAuthPromise) return publicChatAuthPromise;
-            publicChatAuthPromise = firebase.auth().signInAnonymously().then(result => {
+            publicChatAuthPromise = publicChatPersistenceReady.then(() => firebase.auth().signInAnonymously()).then(result => {
                 publicChatUser = result.user;
                 return publicChatUser;
             });
