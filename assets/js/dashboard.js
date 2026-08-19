@@ -261,6 +261,7 @@ function showConfirmModal(title, message, callback, btnText = "Confirm", iconCla
     icon.style.color = iconColor;
     
     confirmCallback = callback;
+    document.getElementById('confirmActionBtn').onclick = executeConfirmAction;
     document.getElementById('confirmActionModal').classList.add('active');
 }
 
@@ -804,9 +805,20 @@ function archiveClient(clientId) {
         .catch(error => showToast('Could not archive client: ' + error.message));
 }
 
-function archiveSelectedClient() {
+async function archiveSelectedClient() {
     const clientId = document.getElementById('archiveClientButton').dataset.clientId;
-    if (clientId) archiveClient(clientId);
+    if (!clientId) return;
+
+    try {
+        const clientSnapshot = await db.collection('clients').doc(clientId).get();
+        if (clientSnapshot.exists && clientSnapshot.data().status === 'archived') {
+            restoreClient(clientId);
+        } else {
+            archiveClient(clientId);
+        }
+    } catch (error) {
+        showToast('Could not update client status: ' + error.message);
+    }
 }
 
 function deleteSelectedClient() {
@@ -825,15 +837,18 @@ async function deleteClient(clientId) {
         try {
             const chatRef = db.collection('chats').doc('client_' + clientId);
             const messages = await chatRef.collection('messages').get();
-            const batch = db.batch();
+            const operations = [];
             for (const message of messages.docs) {
                 const replies = await message.ref.collection('replies').get();
-                replies.docs.forEach(reply => batch.delete(reply.ref));
-                batch.delete(message.ref);
+                replies.docs.forEach(reply => operations.push(reply.ref));
+                operations.push(message.ref);
             }
-            batch.delete(db.collection('clients').doc(clientId));
-            batch.delete(chatRef);
-            await batch.commit();
+            operations.push(db.collection('clients').doc(clientId), chatRef);
+            for (let offset = 0; offset < operations.length; offset += 400) {
+                const deleteBatch = db.batch();
+                operations.slice(offset, offset + 400).forEach(ref => deleteBatch.delete(ref));
+                await deleteBatch.commit();
+            }
             if (currentChatId === 'client_' + clientId) {
                 document.getElementById('clientChatMessages').innerHTML = '<div style="text-align:center; color:var(--text-muted); margin-top:40px;">Select a client to view messages.</div>';
             }
