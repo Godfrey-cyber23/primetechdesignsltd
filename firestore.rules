@@ -22,7 +22,8 @@ service cloud.firestore {
       return isBootstrapAdmin()
         || (isAdmin()
         && exists(/databases/$(database)/documents/admin_users/$(request.auth.uid))
-        && get(/databases/$(database)/documents/admin_users/$(request.auth.uid)).data.status == 'approved');
+        && get(/databases/$(database)/documents/admin_users/$(request.auth.uid)).data.status == 'approved'
+        && get(/databases/$(database)/documents/admin_users/$(request.auth.uid)).data.loginLocked != true);
     }
 
     match /admin_users/{userId} {

@@ -226,6 +226,31 @@
             box-shadow: 0 0 0 4px rgba(0, 212, 255, 0.07);
         }
 
+        .password-field {
+            position: relative;
+        }
+
+        .password-field input {
+            padding-right: 52px;
+        }
+
+        .password-toggle {
+            position: absolute;
+            top: 50%;
+            right: 12px;
+            transform: translateY(-50%);
+            width: 34px;
+            height: 34px;
+            color: var(--text-muted);
+            background: transparent;
+            cursor: pointer;
+        }
+
+        .password-toggle:hover,
+        .password-toggle:focus-visible {
+            color: var(--accent);
+        }
+
         .btn-primary {
             width: 100%;
             min-height: 52px;
@@ -774,8 +799,12 @@
 
                         <div class="form-group">
                             <label for="loginPassword">Password</label>
-                            <input type="password" id="loginPassword" required autocomplete="current-password"
-                                placeholder="••••••••">
+                            <div class="password-field">
+                                <input type="password" id="loginPassword" required autocomplete="current-password"
+                                    placeholder="••••••••">
+                                <button type="button" class="password-toggle" onclick="togglePasswordVisibility('loginPassword', this)"
+                                    aria-label="Show password" title="Show password"><i class="fas fa-eye"></i></button>
+                            </div>
                         </div>
 
                         <button type="submit" class="btn-primary" id="loginBtn">
@@ -1023,6 +1052,15 @@
             setTimeout(() => {
                 error.style.display = 'none';
             }, 4000);
+        }
+
+        function togglePasswordVisibility(inputId, button) {
+            const input = document.getElementById(inputId);
+            const visible = input.type === 'text';
+            input.type = visible ? 'password' : 'text';
+            button.setAttribute('aria-label', visible ? 'Show password' : 'Hide password');
+            button.title = visible ? 'Show password' : 'Hide password';
+            button.innerHTML = `<i class="fas fa-eye${visible ? '' : '-slash'}"></i>`;
         }
     </script>
 

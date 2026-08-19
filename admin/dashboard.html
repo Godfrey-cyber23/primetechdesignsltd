@@ -878,6 +878,22 @@
         </div>
     </div>
 
+    <div class="call-modal" id="adminUnlockModal" style="align-items: center; justify-content: center;">
+        <div class="card branded-dialog" role="dialog" aria-modal="true" aria-labelledby="adminUnlockTitle">
+            <div class="branded-dialog-icon"><i class="fas fa-shield-halved"></i></div>
+            <h3 id="adminUnlockTitle">Confirm super-admin access</h3>
+            <p>Re-enter your current Firebase password to open Administration.</p>
+            <form onsubmit="confirmAdminAccess(event)">
+                <input type="password" id="adminUnlockPassword" autocomplete="current-password" required placeholder="Super-admin password">
+                <div class="branded-dialog-actions">
+                    <button type="button" class="btn-secondary" onclick="closeAdminAccess()">Cancel</button>
+                    <button type="submit" class="btn-primary">Confirm</button>
+                </div>
+                <p id="adminUnlockError" class="form-help" style="color:var(--danger); display:none;"></p>
+            </form>
+        </div>
+    </div>
+
     <!-- === BRANDED NOTICE MODAL === -->
     <div class="call-modal" id="noticeModal" style="align-items: center; justify-content: center;">
         <div class="card branded-dialog" role="dialog" aria-modal="true" aria-labelledby="noticeModalTitle">

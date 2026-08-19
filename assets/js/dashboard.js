@@ -31,6 +31,9 @@ let presenceHeartbeat = null;
 let messagePriority = false;
 let authenticatedAdminProfile = null;
 let isSuperAdmin = false;
+let adminAccessUnlocked = false;
+let inactivityTimer = null;
+const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000;
 
 // === TOAST ===
 function showToast(msg) {
@@ -76,6 +79,10 @@ restoreSidebarState();
 
 // === VIEW SWITCHER ===
 function switchView(viewId, btn) {
+    if (viewId === 'adminControls' && (!isSuperAdmin || !adminAccessUnlocked)) {
+        requestAdminAccess();
+        return;
+    }
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById(viewId).classList.add('active');
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -107,6 +114,55 @@ function switchView(viewId, btn) {
         if (trafficChartInstance) trafficChartInstance.resize();
     }
 }
+
+function requestAdminAccess() {
+    if (!isSuperAdmin) return;
+    document.getElementById('adminUnlockPassword').value = '';
+    document.getElementById('adminUnlockError').style.display = 'none';
+    document.getElementById('adminUnlockModal').classList.add('active');
+    setTimeout(() => document.getElementById('adminUnlockPassword').focus(), 0);
+}
+
+function closeAdminAccess() {
+    document.getElementById('adminUnlockModal').classList.remove('active');
+}
+
+async function confirmAdminAccess(event) {
+    event.preventDefault();
+    const password = document.getElementById('adminUnlockPassword').value;
+    const error = document.getElementById('adminUnlockError');
+    try {
+        const credential = firebase.auth.EmailAuthProvider.credential(authenticatedAdmin.email, password);
+        await authenticatedAdmin.reauthenticateWithCredential(credential);
+        adminAccessUnlocked = true;
+        closeAdminAccess();
+        const button = document.querySelector('#adminControlsNav .nav-item');
+        switchView('adminControls', button);
+        showToast('Administration unlocked for this session.');
+    } catch (authError) {
+        error.innerText = authError.code === 'auth/wrong-password' ? 'The password is incorrect.' : 'Could not confirm access. Try again.';
+        error.style.display = 'block';
+    }
+}
+
+function resetInactivityTimer() {
+    if (!authenticatedAdmin) return;
+    clearTimeout(inactivityTimer);
+    inactivityTimer = setTimeout(lockForInactivity, INACTIVITY_TIMEOUT_MS);
+}
+
+async function lockForInactivity() {
+    adminAccessUnlocked = false;
+    if (document.getElementById('adminControls')?.classList.contains('active')) {
+        showToast('Administration locked after inactivity.');
+    }
+    await firebase.auth().signOut();
+    window.location.href = 'login.html';
+}
+
+['click', 'keydown', 'mousemove', 'touchstart'].forEach(eventName => {
+    document.addEventListener(eventName, resetInactivityTimer, { passive: true });
+});
 
 // ==========================================
 // FIREBASE: DASHBOARD STATS & ANALYTICS
@@ -635,10 +691,11 @@ function loadAdminCommandCenter() {
             </div>`).join('') : '<p class="form-help">No pending account requests.</p>';
         const managedMarkup = managed.length ? `<h4 style="margin:20px 0 8px;">Current members</h4>${managed.map(member => `
             <div class="list-item" style="align-items:flex-start; gap:12px;">
-                <div class="list-info"><h4>${escapeHtml(member.displayName || member.email || 'Member')}</h4><p>${escapeHtml(member.email || '')} · ${escapeHtml(member.status)}</p></div>
+                <div class="list-info"><h4>${escapeHtml(member.displayName || member.email || 'Member')}</h4><p>${escapeHtml(member.email || '')} · ${escapeHtml(member.loginLocked ? 'login locked' : member.status)}</p></div>
                 <select onchange="updateAdminMember('${member.uid}', this.value)">
                     ${['member', 'manager', 'admin'].map(role => `<option value="${role}" ${member.role === role ? 'selected' : ''}>${role}</option>`).join('')}
                 </select>
+                ${member.loginLocked ? `<button class="btn-success" onclick="unlockAdmin('${member.uid}')" title="Unlock login"><i class="fas fa-unlock"></i></button>` : ''}
                 <button class="${member.status === 'suspended' ? 'btn-success' : 'btn-danger'}" onclick="updateAdminMember('${member.uid}', '${member.status === 'suspended' ? 'approved' : 'suspended'}')" title="${member.status === 'suspended' ? 'Restore access' : 'Suspend access'}"><i class="fas fa-${member.status === 'suspended' ? 'rotate-left' : 'ban'}"></i></button>
             </div>`).join('')}` : '';
         document.getElementById('adminApprovalList').innerHTML = pendingMarkup + managedMarkup;
@@ -684,6 +741,15 @@ async function updateAdminMember(uid, value) {
         await recordAdminAudit(update.status ? `${update.status === 'suspended' ? 'Suspended' : 'Restored'} admin access` : 'Updated admin role', uid, update.role || '');
         showToast('Member access updated.');
     } catch (error) { showToast('Could not update member: ' + error.message); }
+}
+
+async function unlockAdmin(uid) {
+    if (!isSuperAdmin || uid === BOOTSTRAP_ADMIN_UID) return;
+    try {
+        await db.collection('admin_users').doc(uid).update({ loginLocked: false, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+        await recordAdminAudit('Unlocked admin login', uid, 'Login lock cleared by super admin');
+        showToast('Login unlocked.');
+    } catch (error) { showToast('Could not unlock account: ' + error.message); }
 }
 
 async function createAdminTask(event) {
@@ -2376,6 +2442,7 @@ firebase.auth().onAuthStateChanged(async user => {
     isSuperAdmin = user.uid === BOOTSTRAP_ADMIN_UID;
     document.getElementById('adminControlsNav').style.display = isSuperAdmin ? '' : 'none';
     if (isSuperAdmin) loadAdminCommandCenter();
+    resetInactivityTimer();
         loadAdminProfile().catch(error => console.warn('Could not load admin profile:', error.message));
         loadTeamDirectory();
         document.getElementById('teamPresenceName').innerText = user.displayName || adminName;

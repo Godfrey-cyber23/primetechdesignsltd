@@ -11,6 +11,8 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 
 const BOOTSTRAP_ADMIN_UID = 'sJSLqnZTFvcnubHnNyl1NJlMHy52';
+const MAX_LOGIN_ATTEMPTS = 3;
+let authRedirectInProgress = false;
 
 function switchView(viewId) {
     document.querySelectorAll('.auth-view').forEach(v => v.classList.remove('active'));
@@ -20,8 +22,35 @@ function switchView(viewId) {
 
 function showMsg(elementId, message, isError = true) {
     const el = document.getElementById(elementId);
+    if (!el) return;
     el.innerText = message;
+    el.classList.toggle('success-msg', !isError);
+    el.classList.toggle('error-msg', isError);
     el.style.display = 'block';
+}
+
+function authErrorMessage(error) {
+    const messages = {
+        'auth/invalid-credential': 'Email or password is incorrect.',
+        'auth/wrong-password': 'Email or password is incorrect.',
+        'auth/user-not-found': 'Email or password is incorrect.',
+        'auth/too-many-requests': 'Too many attempts. Try again later or contact the system administrator.',
+        'auth/user-disabled': 'This account is disabled. Contact the system administrator.',
+        'auth/network-request-failed': 'Network error. Check your connection and try again.'
+    };
+    return messages[error.code] || error.message || 'Authentication failed. Please try again.';
+}
+
+function loginAttemptKey(email) {
+    return `primetech-login-attempts:${email.trim().toLowerCase()}`;
+}
+
+function getLoginAttempts(email) {
+    return Number.parseInt(localStorage.getItem(loginAttemptKey(email)) || '0', 10) || 0;
+}
+
+function clearLoginAttempts(email) {
+    localStorage.removeItem(loginAttemptKey(email));
 }
 
 function setLoading(buttonId, isLoading, originalText) {
@@ -54,6 +83,8 @@ function createPendingAdminProfile(user) {
 }
 
 async function continueToDashboard(user) {
+    if (authRedirectInProgress) return;
+    authRedirectInProgress = true;
     const profileSnapshot = await getAdminProfile(user);
     if (!profileSnapshot.exists) {
         await createPendingAdminProfile(user);
@@ -67,6 +98,12 @@ async function continueToDashboard(user) {
     }
 
     const profile = profileSnapshot.data();
+    if (profile.loginLocked === true) {
+        await firebase.auth().signOut();
+        authRedirectInProgress = false;
+        showMsg('loginError', 'This account is locked. A super administrator must unlock it.');
+        return;
+    }
     if (user.uid === BOOTSTRAP_ADMIN_UID && profile.status !== 'approved') {
         await firebase.firestore().collection('admin_users').doc(user.uid).update({
             status: 'approved',
@@ -78,6 +115,7 @@ async function continueToDashboard(user) {
 
     if (profile.status !== 'approved') {
         await firebase.auth().signOut();
+        authRedirectInProgress = false;
         showMsg('loginError', profile.status === 'rejected'
             ? 'Your dashboard access request was not approved.'
             : 'Your account is awaiting system administrator approval.');
@@ -89,15 +127,28 @@ async function continueToDashboard(user) {
 
 function loginUser(e) {
     e.preventDefault();
-    setLoading('loginBtn', true, '');
-    const email = document.getElementById('loginEmail').value;
+    const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value;
+    const attempts = getLoginAttempts(email);
+    if (attempts >= MAX_LOGIN_ATTEMPTS) {
+        showMsg('loginError', 'This account is locked after 3 failed attempts. A super administrator must unlock it.');
+        return;
+    }
+    setLoading('loginBtn', true, 'Sign In');
 
     firebase.auth().signInWithEmailAndPassword(email, password)
-        .then(continueToDashboard)
+        .then(userCredential => {
+            clearLoginAttempts(email);
+            return continueToDashboard(userCredential.user);
+        })
         .catch(err => {
-            showMsg('loginError', err.message);
+            const nextAttempts = getLoginAttempts(email) + 1;
+            localStorage.setItem(loginAttemptKey(email), String(nextAttempts));
+            showMsg('loginError', nextAttempts >= MAX_LOGIN_ATTEMPTS
+                ? '3 failed attempts. This account is locked until a super administrator unlocks it.'
+                : `${authErrorMessage(err)} ${MAX_LOGIN_ATTEMPTS - nextAttempts} attempt(s) remaining.`);
             setLoading('loginBtn', false, 'Sign In');
+            authRedirectInProgress = false;
         });
 }
 
@@ -125,7 +176,7 @@ function loginWithGoogle() {
     firebase.auth().signInWithPopup(provider)
         .then(continueToDashboard)
         .catch(err => {
-            showMsg('loginError', err.message);
+            showMsg('loginError', authErrorMessage(err));
         });
 }
 
@@ -176,7 +227,7 @@ function verifyPhoneCode() {
         switchView('loginView');
         showMsg('loginError', 'Account verified. A system administrator must approve it before dashboard access is enabled.');
     }).catch(() => {
-        showMsg('phoneError', "Invalid code. Please try again.");
+        showMsg('phoneError', "Invalid verification code. Please try again.");
         btn.innerText = 'Verify & Login';
         btn.disabled = false;
     });
