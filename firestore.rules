@@ -8,16 +8,22 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isBootstrapAdmin() {
+      return request.auth != null
+        && request.auth.uid == 'sJSLqnZTFvcnubHnNyl1NJlMHy52';
+    }
+
     // Dashboard accounts are approved manually by an administrator.
     function isApprovedAdmin() {
-      return isAdmin()
+      return isBootstrapAdmin()
+        || (isAdmin()
         && exists(/databases/$(database)/documents/admin_users/$(request.auth.uid))
-        && get(/databases/$(database)/documents/admin_users/$(request.auth.uid)).data.status == 'approved';
+        && get(/databases/$(database)/documents/admin_users/$(request.auth.uid)).data.status == 'approved');
     }
 
     match /admin_users/{userId} {
       allow create: if isAdmin() && request.auth.uid == userId
-                    && request.resource.data.status == 'pending';
+                    && (request.resource.data.status == 'pending' || isBootstrapAdmin());
       allow read: if isAdmin() && request.auth.uid == userId;
       allow update: if isApprovedAdmin()
               || (isAdmin() && request.auth.uid == userId
@@ -62,7 +68,7 @@ service cloud.firestore {
     // Public visitors can read published projects. Administrators can manage
     // all projects and their project-form documents.
     match /projects/{projectId} {
-      allow read: if resource.data.isPublished == true || isAdmin();
+      allow read: if resource.data.isPublished == true || isApprovedAdmin();
       allow write: if isApprovedAdmin();
 
       match /forms/{formId} {

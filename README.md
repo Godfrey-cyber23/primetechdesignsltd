@@ -101,6 +101,8 @@ The browser configuration reference is stored at [docs/development/firebase-clie
 
 Dashboard accounts are stored in `admin_users/{uid}`. Email, Google, and phone signups create a profile with `status: "pending"` and are signed out immediately. A trusted administrator must change that document to `status: "approved"` in the Firebase Console before the account can enter `admin/dashboard.html`. Anonymous Firebase Authentication must also be enabled for the public named live-chat flow.
 
+The initial system administrator is the Firebase user with UID `sJSLqnZTFvcnubHnNyl1NJlMHy52` (`godfreyb998@gmail.com`). This UID is treated as the bootstrap administrator by the client approval flow and Firestore rules. Remove or replace this bootstrap exception after a permanent administrator-claims workflow is established.
+
 Public chat visitors are stored in `clients/{visitorUid}` and their conversations are separated into `chats/client_{visitorUid}/messages`. Approved dashboard users can archive, restore, or permanently delete a client and the client's conversation from the Client Messages view.
 
 The project forms module uses these Firestore paths:

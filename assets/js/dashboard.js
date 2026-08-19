@@ -13,6 +13,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const adminName = "Godfrey"; // Hardcoded admin name for chat
+const BOOTSTRAP_ADMIN_UID = 'sJSLqnZTFvcnubHnNyl1NJlMHy52';
 let authenticatedAdmin = null;
 
 // Global State
@@ -1667,7 +1668,7 @@ firebase.auth().onAuthStateChanged(async user => {
     try {
         const profileSnapshot = await db.collection('admin_users').doc(user.uid).get();
         const profile = profileSnapshot.exists ? profileSnapshot.data() : null;
-        if (!profile || profile.status !== 'approved') {
+        if (user.uid !== BOOTSTRAP_ADMIN_UID && (!profile || profile.status !== 'approved')) {
             await firebase.auth().signOut();
             window.location.href = 'login.html';
             return;

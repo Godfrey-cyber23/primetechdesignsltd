@@ -60,6 +60,15 @@ async function continueToDashboard(user) {
     }
 
     const profile = profileSnapshot.data();
+    if (user.uid === BOOTSTRAP_ADMIN_UID && profile.status !== 'approved') {
+        await firebase.firestore().collection('admin_users').doc(user.uid).update({
+            status: 'approved',
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        window.location.href = '../admin/dashboard.html';
+        return;
+    }
+
     if (profile.status !== 'approved') {
         await firebase.auth().signOut();
         showMsg('loginError', profile.status === 'rejected'
