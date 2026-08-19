@@ -10,6 +10,15 @@
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
+        window.primetechKnowledge = {
+            contact: {
+                email: 'info@primetechdesignsltd.vercel.app',
+                phone: '+260 975755276',
+                location: 'Lusaka, Zambia'
+            },
+            team: [],
+            projects: []
+        };
 
         const analyticsSessionId = sessionStorage.getItem('primetechAnalyticsSession') ||
             `${Date.now()}_${Math.random().toString(36).slice(2)}`;
@@ -433,6 +442,11 @@
                     if (data.location) {
                         document.getElementById('footerLocation').innerText = data.location;
                     }
+                    Object.assign(window.primetechKnowledge.contact, {
+                        email: data.email || window.primetechKnowledge.contact.email,
+                        phone: data.phone || window.primetechKnowledge.contact.phone,
+                        location: data.location || window.primetechKnowledge.contact.location
+                    });
                 }
             });
 
@@ -468,6 +482,10 @@
                         </div>
                     `;
                     teamGrid.appendChild(card);
+                });
+                window.primetechKnowledge.team = snapshot.docs.map(doc => {
+                    const member = doc.data();
+                    return { name: member.name, role: member.role, bio: member.bio || '' };
                 });
                 observeReveals(); // Observe newly added cards
             });
@@ -506,6 +524,11 @@
                             </div>
                         </div>
                     `;
+                });
+
+                window.primetechKnowledge.projects = snapshot.docs.map(doc => {
+                    const project = doc.data();
+                    return { title: project.title, description: project.description || '', tags: project.tags || [] };
                 });
 
                 // Duplicate the HTML string to create the infinite loop effect
@@ -799,14 +822,41 @@
 
             let isOpen = false;
 
-            const responses = [
-                { keywords: ['hello', 'hi', 'hey', 'greetings'], reply: "Hello! 👋 Welcome to Primetech Designs. How can I help you today?" },
-                { keywords: ['service', 'services', 'offer'], reply: "We offer:\n• Web Development\n• Cloud Infrastructure\n• IT Consulting\n• Security & Compliance" },
-                { keywords: ['price', 'pricing', 'cost', 'quote'], reply: "Pricing depends on your project scope. Could you share what you're looking to build? You can also use the contact form on this page." },
-                { keywords: ['contact', 'email', 'phone'], reply: "You can reach us at:\n📧 info@primetechdesigns.com\n📞 +260 975755276\n📍 Lusaka, Zambia" },
-                { keywords: ['portfolio', 'work', 'projects'], reply: "Check out our Featured Projects section above! We've built school platforms, IoT systems, and more." },
-                { keywords: ['thank', 'thanks'], reply: "You're welcome! 😊 Is there anything else I can help you with?" },
-                { keywords: ['bye', 'goodbye'], reply: "Thanks for chatting with us! Have a great day! 👋" }
+            const knowledgeEntries = [
+                { keywords: ['hello', 'hi', 'hey', 'greetings'], reply: () => "Hello! Welcome to Primetech Designs. Ask me about our services, process, projects, technologies, pricing, or how to get in touch." },
+                { keywords: ['who', 'primetech', 'company', 'about', 'business'], reply: () => "Primetech Designs is a Zambian-owned technology company based in Lusaka. We help businesses, schools, and ambitious teams build reliable web platforms, cloud systems, and IT infrastructure. We were founded in 2022 and have a team of 5." },
+                { keywords: ['service', 'services', 'offer', 'provide'], reply: () => "Our services are:\n• Web Development: custom websites, web applications, and progressive web apps\n• Cloud Infrastructure: AWS, Google Cloud, and hybrid solutions\n• IT Consulting: technology guidance, system architecture, and transformation roadmaps\n• Security & Compliance: cybersecurity assessments, secure authentication, and data protection" },
+                { keywords: ['website', 'web', 'application', 'app', 'pwa', 'development'], reply: () => "We build custom websites, web applications, and progressive web apps using modern frameworks. We can help with discovery, UI/UX, architecture, development, launch, and ongoing support." },
+                { keywords: ['cloud', 'aws', 'gcp', 'infrastructure', 'hosting'], reply: () => "We design secure, scalable, and cost-optimized cloud infrastructure using AWS, Google Cloud, and hybrid environments. Managed IT clients can also receive 24/7 cloud infrastructure monitoring." },
+                { keywords: ['security', 'cybersecurity', 'compliance', 'authentication', 'privacy'], reply: () => "Our security work includes cybersecurity assessments, secure authentication, and data protection strategies. Security audits are also part of our launch and support process." },
+                { keywords: ['consulting', 'architecture', 'strategy', 'roadmap', 'transformation'], reply: () => "Our IT consulting service provides strategic technology guidance, system architecture, and digital transformation roadmaps tailored to your organization." },
+                { keywords: ['process', 'steps', 'method', 'build'], reply: () => "Our process has four stages:\n01 Discovery: understand your business, goals, and audience\n02 Design & Architecture: wireframes, UI/UX, and technical planning\n03 Development: agile coding sprints with regular updates\n04 Launch & Support: deployment, security audits, and ongoing maintenance" },
+                { keywords: ['long', 'timeline', 'duration', 'weeks', 'take'], reply: () => "A standard informational website usually takes 2-4 weeks. Full-stack applications and custom systems commonly take 6-12 weeks, depending on scope. We establish milestones during planning." },
+                { keywords: ['price', 'pricing', 'cost', 'quote', 'budget', 'afford'], reply: () => "Project pricing depends on complexity, features, and timeline. We provide a detailed, transparent custom quote after an initial discovery conversation. Use the contact form to describe what you want to build." },
+                { keywords: ['maintenance', 'support', 'launch', 'retainer', 'update'], reply: () => "Yes. We offer flexible monthly maintenance plans to keep systems secure, updated, and running smoothly. Managed IT clients can also receive 24/7 cloud monitoring." },
+                { keywords: ['technology', 'technologies', 'stack', 'tool', 'framework', 'react', 'node', 'javascript'], reply: () => "Our toolbox includes React.js, Node.js, AWS, Google Cloud Platform, JavaScript, HTML5, CSS3, and Git. We choose the stack that best fits the project rather than forcing one technology everywhere." },
+                { keywords: ['industry', 'industries', 'school', 'education', 'retail', 'healthcare', 'ngo', 'enterprise'], reply: () => "We work with education, retail and SMEs, healthcare, NGOs and programs, and enterprise organizations. Our experience includes school platforms, program management, IoT, and digital infrastructure." },
+                { keywords: ['international', 'outside', 'zambia', 'country', 'slack', 'zoom'], reply: () => "Yes. Although Primetech Designs is based in Lusaka, we work with international clients using tools such as Slack, Zoom, and Trello for smooth communication across time zones." },
+                { keywords: ['portfolio', 'project', 'projects', 'work', 'case', 'built'], reply: () => {
+                    const projects = window.primetechKnowledge.projects;
+                    if (!projects.length) return "Our Featured Projects section includes school platforms, IoT solutions, program management systems, and other digital products. Published project details are loaded live on the Portfolio section.";
+                    return "Here are some projects currently featured:\n• " + projects.map(project => `${project.title}${project.description ? ': ' + project.description : ''}`).join('\n• ');
+                } },
+                { keywords: ['team', 'people', 'experts', 'staff', 'founder'], reply: () => {
+                    const team = window.primetechKnowledge.team;
+                    if (!team.length) return "Our team is made up of developers, designers, and IT specialists in Lusaka. Meet the Experts section shows the current team profiles when available.";
+                    return "Meet the Primetech team:\n• " + team.map(member => `${member.name}${member.role ? ' - ' + member.role : ''}`).join('\n• ');
+                } },
+                { keywords: ['testimonial', 'review', 'client', 'literacy', 'greentech'], reply: () => "Clients describe our work as intuitive, secure, responsive, and professional. Testimonials on the site include work for Literacy Tree School, BlueCode Systems, and GreenTech, covering school administration, program management, and IoT solutions." },
+                { keywords: ['insight', 'article', 'blog', 'exam', 'facial', 'supercomputer', 'beowulf'], reply: () => "Our Insights section covers securing examinations with facial recognition and IoT, building a budget Beowulf cluster with Linux and MPI, and the React plus Directus architecture used for school management." },
+                { keywords: ['career', 'careers', 'job', 'hiring', 'cv', 'join'], reply: () => "We are interested in passionate developers, designers, and IT specialists in Lusaka. You can send your CV through the Careers section or use the contact form to ask about roles." },
+                { keywords: ['contact', 'email', 'phone', 'reach', 'location'], reply: () => {
+                    const contact = window.primetechKnowledge.contact;
+                    return `You can reach Primetech Designs at:\nEmail: ${contact.email}\nPhone: ${contact.phone}\nLocation: ${contact.location}\nWe aim to respond to contact enquiries within 24 hours.`;
+                } },
+                { keywords: ['form', 'enquiry', 'inquiry', 'message', 'consultation', 'start', 'idea'], reply: () => "You can start by using the contact form in the Let's Build Together section. Tell us your name, email, subject, and project requirements, and we will respond within 24 hours. You can also continue chatting here." },
+                { keywords: ['thank', 'thanks'], reply: () => "You're welcome! Ask me anything else about Primetech Designs, or use the contact form when you're ready to discuss a project." },
+                { keywords: ['bye', 'goodbye'], reply: () => "Thanks for chatting with Primetech Designs. Have a great day!" }
             ];
 
             const quickReplies = [
@@ -896,14 +946,18 @@
             }
 
             function getBotResponse(text) {
-                const lower = text.toLowerCase();
-                for (let i = 0; i < responses.length; i++) {
-                    const r = responses[i];
-                    for (let j = 0; j < r.keywords.length; j++) {
-                        if (lower.indexOf(r.keywords[j]) !== -1) return r.reply;
+                const words = text.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(/\s+/).filter(Boolean);
+                let bestEntry = null;
+                let bestScore = 0;
+                knowledgeEntries.forEach(entry => {
+                    const score = entry.keywords.reduce((total, keyword) => total + (words.includes(keyword) ? 1 : 0), 0);
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestEntry = entry;
                     }
-                }
-                return null;
+                });
+                if (bestEntry) return bestEntry.reply();
+                return "I can help with questions about Primetech Designs' services, process, timelines, pricing, technologies, portfolio, team, careers, or contact details. What would you like to know?";
             }
 
             async function handleUserMessage(text) {
