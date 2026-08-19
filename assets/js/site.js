@@ -13,6 +13,7 @@
 
         let publicChatUser = null;
         let publicChatName = localStorage.getItem('publicChatName') || '';
+        let publicChatListenerStarted = false;
         let publicChatAuthPromise = null;
 
         function ensurePublicChatUser() {
@@ -643,6 +644,7 @@
             const lcNameError = document.getElementById('lcNameError');
             const lcFooter = document.getElementById('lcFooter');
             const lcInput = document.getElementById('lcInput');
+            let pendingChatMessage = '';
 
             function setChatReady(name) {
                 publicChatName = name;
@@ -653,6 +655,13 @@
 
             if (publicChatName) {
                 setChatReady(publicChatName);
+            }
+
+            function showNameGate(message) {
+                pendingChatMessage = message || '';
+                lcNameGate.hidden = false;
+                lcFooter.hidden = true;
+                lcNameInput.focus();
             }
 
             lcNameForm.addEventListener('submit', async function (event) {
@@ -674,8 +683,14 @@
                         status: 'active',
                         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                     }, { merge: true });
+                    startChatListener(visitor);
                     setChatReady(name);
                     lcInput.focus();
+                    if (pendingChatMessage) {
+                        const message = pendingChatMessage;
+                        pendingChatMessage = '';
+                        handleUserMessage(message);
+                    }
                 } catch (error) {
                     console.error('Chat setup error:', error);
                     lcNameError.textContent = 'Chat is temporarily unavailable. Please try again.';
@@ -768,68 +783,87 @@
             async function handleUserMessage(text) {
                 const senderName = publicChatName;
                 if (!senderName) {
-                    lcNameInput.focus();
+                    showNameGate(text);
                     return;
                 }
-                const visitor = await ensurePublicChatUser();
-                const chatId = 'client_' + visitor.uid;
-                await db.collection('clients').doc(visitor.uid).set({
-                    name: senderName,
-                    visitorId: visitor.uid,
-                    status: 'active',
-                    lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                }, { merge: true });
-                await db.collection('chats').doc(chatId).collection('messages').add({
-                    text: text,
-                    sender: "Client",
-                    senderName: senderName,
-                    visitorId: visitor.uid,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                });
+                renderMessage({ text: text, sender: 'user', time: getTime() });
+                try {
+                    const visitor = await ensurePublicChatUser();
+                    const chatId = 'client_' + visitor.uid;
+                    await db.collection('clients').doc(visitor.uid).set({
+                        name: senderName,
+                        visitorId: visitor.uid,
+                        status: 'active',
+                        lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    }, { merge: true });
+                    await db.collection('chats').doc(chatId).collection('messages').add({
+                        text: text,
+                        sender: "Client",
+                        senderName: senderName,
+                        visitorId: visitor.uid,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    });
 
-                const botReply = getBotResponse(text);
-                if (botReply) {
-                    showTyping();
-                    setTimeout(async function () {
-                        hideTyping();
-                        await db.collection('clients').doc(visitor.uid).set({
+                    const botReply = getBotResponse(text);
+                    if (botReply) {
+                        showTyping();
+                        setTimeout(async function () {
+                            try {
+                                hideTyping();
+                                await db.collection('clients').doc(visitor.uid).set({
                             lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
                             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                        }, { merge: true });
-                        await db.collection('chats').doc(chatId).collection('messages').add({
+                                }, { merge: true });
+                                await db.collection('chats').doc(chatId).collection('messages').add({
                             text: botReply,
                             sender: "Bot",
                             senderName: 'Primetech Assistant',
                             visitorId: visitor.uid,
                             timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-                    }, 800 + Math.random() * 700);
+                                });
+                            } catch (error) {
+                                hideTyping();
+                                console.error('Bot reply error:', error);
+                                renderMessage({ text: 'I am having trouble replying right now. Please try again.', sender: 'bot', time: getTime() });
+                            }
+                        }, 800 + Math.random() * 700);
+                    }
+                } catch (error) {
+                    console.error('Message send error:', error);
+                    renderMessage({ text: 'Your message could not be sent. Please try again.', sender: 'bot', time: getTime() });
                 }
             }
 
-            ensurePublicChatUser();
-            firebase.auth().onAuthStateChanged(user => {
-                if (!user || !user.isAnonymous) return;
+            function startChatListener(user) {
+                if (publicChatListenerStarted || !user || !user.isAnonymous) return;
+                publicChatListenerStarted = true;
                 const chatId = 'client_' + user.uid;
                 db.collection('chats').doc(chatId).collection('messages').orderBy('timestamp').onSnapshot(snapshot => {
-                lcMessages.innerHTML = '';
-
-                if (snapshot.empty) {
-                    renderMessage({ text: "Hi there! 👋 Welcome to Primetech Designs. How can we help you today?", sender: 'bot', time: getTime() });
-                    setTimeout(showQuickReplies, 600);
-                    return;
-                }
-
-                snapshot.forEach(doc => {
-                    const m = doc.data();
-                    const time = m.timestamp ? new Date(m.timestamp.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '...';
-                    const sender = (m.sender === "Client") ? 'user' : 'bot';
-                    renderMessage({ text: m.text, sender: sender, time: time });
+                    lcMessages.innerHTML = '';
+                    snapshot.forEach(doc => {
+                        const m = doc.data();
+                        const time = m.timestamp ? new Date(m.timestamp.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '...';
+                        const sender = (m.sender === "Client") ? 'user' : 'bot';
+                        renderMessage({ text: m.text, sender: sender, time: time });
+                    });
+                    if (snapshot.empty) {
+                        renderMessage({ text: "Hi there! 👋 Welcome to Primetech Designs. How can we help you today?", sender: 'bot', time: getTime() });
+                        setTimeout(showQuickReplies, 600);
+                    }
+                }, error => {
+                    console.error('Live chat listener error:', error);
                 });
-                lcMessages.scrollTop = lcMessages.scrollHeight;
+            }
+
+            renderMessage({ text: "Hi there! 👋 Welcome to Primetech Designs. How can we help you today?", sender: 'bot', time: getTime() });
+            setTimeout(showQuickReplies, 600);
+
+            if (publicChatName) {
+                ensurePublicChatUser().then(startChatListener).catch(error => {
+                    console.error('Anonymous chat authentication error:', error);
                 });
-            });
+            }
 
             function openChat() {
                 lcWindow.classList.add('open');
