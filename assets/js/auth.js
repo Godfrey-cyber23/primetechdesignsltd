@@ -10,6 +10,8 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 
+const BOOTSTRAP_ADMIN_UID = 'sJSLqnZTFvcnubHnNyl1NJlMHy52';
+
 function switchView(viewId) {
     document.querySelectorAll('.auth-view').forEach(v => v.classList.remove('active'));
     document.getElementById(viewId).classList.add('active');
@@ -38,11 +40,12 @@ function getAdminProfile(user) {
 }
 
 function createPendingAdminProfile(user) {
+    const isBootstrapAdmin = user.uid === BOOTSTRAP_ADMIN_UID;
     const profile = {
         email: user.email || '',
         displayName: user.displayName || '',
         provider: user.providerData[0] ? user.providerData[0].providerId : 'password',
-        status: 'pending',
+        status: isBootstrapAdmin ? 'approved' : 'pending',
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
@@ -54,6 +57,10 @@ async function continueToDashboard(user) {
     const profileSnapshot = await getAdminProfile(user);
     if (!profileSnapshot.exists) {
         await createPendingAdminProfile(user);
+        if (user.uid === BOOTSTRAP_ADMIN_UID) {
+            window.location.href = '../admin/dashboard.html';
+            return;
+        }
         await firebase.auth().signOut();
         showMsg('loginError', 'Your account is awaiting system administrator approval.');
         return;
