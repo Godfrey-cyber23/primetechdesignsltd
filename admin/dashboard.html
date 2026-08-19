@@ -167,37 +167,46 @@
                 <div class="chat-container">
                     <div class="chat-sidebar" id="teamSidebar">
                         <div class="chat-sidebar-section">
-                            <div class="sidebar-header"><span>Channels</span><i class="fas fa-plus"
-                                    style="font-size:0.7rem;" onclick="addChannel()"></i></div>
+                            <div class="team-presence-card">
+                                <div class="team-presence-avatar" id="teamPresenceAvatar">G</div>
+                                <div class="team-presence-copy">
+                                    <strong id="teamPresenceName">Godfrey</strong>
+                                    <select id="teamPresenceStatus" onchange="updatePresenceStatus(this.value)" aria-label="Your availability">
+                                        <option value="online">Online</option>
+                                        <option value="away">Away</option>
+                                        <option value="offline">Offline</option>
+                                    </select>
+                                </div>
+                                <span class="presence-dot online" id="teamPresenceDot"></span>
+                            </div>
+                            <div class="chat-search"><i class="fas fa-search"></i><input type="search" id="teamChatSearch"
+                                    placeholder="Search people and channels..." oninput="filterTeamChat()"></div>
+                            <div class="sidebar-header"><span>Channels</span><button class="sidebar-icon-btn" title="Create channel"
+                                    onclick="addChannel()"><i class="fas fa-plus"></i></button></div>
                             <ul class="chat-user-list" id="channelList">
                                 <li class="chat-user-item active"
                                     onclick="selectChat('team', 'team_general', 'general', this)"><span
-                                        class="hash">#</span> general</li>
+                                        class="hash">#</span><span class="chat-item-label">general</span></li>
                                 <li class="chat-user-item" onclick="selectChat('team', 'team_design', 'design', this)">
-                                    <span class="hash">#</span> design
+                                    <span class="hash">#</span><span class="chat-item-label">design</span>
                                 </li>
                             </ul>
                         </div>
                         <div class="chat-sidebar-section">
-                            <div class="sidebar-header"><span>Direct Messages</span><i class="fas fa-plus"
-                                    style="font-size:0.7rem;" onclick="addDM()"></i></div>
-                            <ul class="chat-user-list" id="dmList">
-                                <li class="chat-user-item" onclick="selectChat('team', 'dm_jane', 'Jane Doe', this)">
-                                    <img src="https://i.pravatar.cc/150?img=5">
-                                    <div>
-                                        <h4>Jane Doe</h4>
-                                    </div>
-                                    <div class="presence-dot"></div>
-                                </li>
-                            </ul>
+                            <div class="sidebar-header"><span>People</span><button class="sidebar-icon-btn" title="Start a direct message"
+                                    onclick="addDM()"><i class="fas fa-pen"></i></button></div>
+                            <ul class="chat-user-list" id="dmList"><li class="chat-user-item roster-loading">Loading team...</li></ul>
                         </div>
                     </div>
                     <div class="chat-main">
                         <div class="chat-header">
                             <button class="menu-toggle" style="font-size: 1.2rem;"
                                 onclick="toggleChatSidebar('teamSidebar')"><i class="fas fa-bars"></i></button>
-                            <h4 id="teamChatHeader"><span class="hash">#</span> general</h4>
+                            <div class="team-chat-heading"><h4 id="teamChatHeader"><span class="hash">#</span> general</h4>
+                                <span id="teamChatMeta">Team channel</span></div>
                             <div class="chat-header-actions">
+                                <button onclick="togglePinnedMessages()" title="Pinned messages"><i class="fas fa-thumbtack"></i></button>
+                                <button onclick="toggleChatDetails()" title="Conversation details"><i class="fas fa-circle-info"></i></button>
                                 <button onclick="startCall('audio')"><i class="fas fa-phone"></i></button>
                                 <button onclick="startCall('video')"><i class="fas fa-video"></i></button>
                             </div>
@@ -206,13 +215,21 @@
                         <div class="typing-indicator" id="teamTyping"></div>
                         <div class="chat-input-area">
                             <div class="chat-input-tools">
+                            <button class="tool-btn" onclick="insertChatToken('code')" title="Insert code block"><i
+                                class="fas fa-code"></i></button>
+                            <button class="tool-btn" onclick="insertChatToken('mention')" title="Mention a teammate"><i
+                                class="fas fa-at"></i></button>
+                            <button class="tool-btn" onclick="insertChatToken('command')" title="Insert slash command"><i
+                                class="fas fa-terminal"></i></button>
                                 <button class="tool-btn" onclick="document.getElementById('fileInputTeam').click()"><i
-                                        class="fas fa-paperclip"></i></button>
+                                class="fas fa-paperclip"></i></button>
                                 <input type="file" id="fileInputTeam" style="display:none"
                                     onchange="handleFileUpload(event, 'team')">
                             </div>
-                            <input type="text" id="teamChatInput" placeholder="Message #general..."
-                                oninput="handleTyping('team')" onkeypress="handleChatSend(event, 'team')">
+                            <textarea id="teamChatInput" rows="1" placeholder="Message #general..."
+                            oninput="handleTyping('team'); autoGrowChatInput(this)" onkeydown="handleChatSend(event, 'team')"></textarea>
+                            <button class="tool-btn priority-btn" onclick="toggleMessagePriority()" title="Mark next message as high priority"><i
+                                class="fas fa-bell"></i></button>
                             <button class="chat-send-btn" onclick="sendMessage('team')"><i
                                     class="fas fa-paper-plane"></i></button>
                         </div>
@@ -820,4 +837,4 @@
     <script src="../assets/js/dashboard.js"></script>
 </body>
 
-</html>
+</html>

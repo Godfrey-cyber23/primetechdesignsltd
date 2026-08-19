@@ -24,6 +24,11 @@ let currentThreadMsgId = null;
 let activeThreadListener = null;
 let chartsInitialized = false;
 let trafficChartInstance, engagementChartInstance, sourcesChartInstance;
+let teamRoster = [];
+let teamPresence = {};
+let activePresenceListener = null;
+let presenceHeartbeat = null;
+let messagePriority = false;
 
 // === TOAST ===
 function showToast(msg) {
@@ -449,6 +454,126 @@ db.collection('team_members').onSnapshot(snapshot => {
 // ==========================================
 let activeClientListener = null;
 
+function initials(name) {
+    return (name || 'Team').split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase();
+}
+
+function presenceState(data) {
+    if (!data || data.status === 'offline') return 'offline';
+    if (data.status === 'away') return 'away';
+    const lastSeen = data.lastSeen && data.lastSeen.toDate ? data.lastSeen.toDate().getTime() : 0;
+    return lastSeen && Date.now() - lastSeen > 120000 ? 'offline' : 'online';
+}
+
+function renderTeamRoster() {
+    const list = document.getElementById('dmList');
+    if (!list) return;
+    const query = (document.getElementById('teamChatSearch')?.value || '').toLowerCase();
+    const visibleMembers = teamRoster.filter(member => `${member.name} ${member.role} ${member.email}`.toLowerCase().includes(query));
+    list.innerHTML = visibleMembers.length ? visibleMembers.map(member => {
+        const memberPresence = teamPresence[member.presenceId] || Object.values(teamPresence).find(presence =>
+            (member.email && presence.email === member.email) || (member.name && presence.name === member.name)
+        );
+        const state = presenceState(memberPresence);
+        const chatId = 'dm_' + (member.presenceId || member.id || member.name).replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
+        return `<li class="chat-user-item" onclick="selectChat('team', '${chatId}', '${member.name.replace(/'/g, "\\'")}', this)">
+            ${member.img ? `<img src="${member.img}" onerror="this.style.display='none'">` : `<span class="team-avatar">${initials(member.name)}</span>`}
+            <div class="chat-person-copy"><h4>${member.name}</h4><small>${member.role || 'Team member'}</small></div>
+            <span class="presence-dot ${state}" title="${state}"></span>
+        </li>`;
+    }).join('') : '<li class="chat-user-item roster-loading">No matching teammates.</li>';
+}
+
+function filterTeamChat() {
+    const query = (document.getElementById('teamChatSearch')?.value || '').toLowerCase();
+    document.querySelectorAll('#channelList .chat-user-item').forEach(item => {
+        item.style.display = item.innerText.toLowerCase().includes(query) ? '' : 'none';
+    });
+    renderTeamRoster();
+}
+
+function loadTeamChat() {
+    const membersByKey = {};
+    db.collection('team_members').onSnapshot(snapshot => {
+        snapshot.forEach(doc => {
+            const member = doc.data();
+            membersByKey[(member.name || doc.id).toLowerCase()] = { ...member, id: doc.id, presenceId: member.uid || member.email || doc.id };
+        });
+        teamRoster = Object.values(membersByKey);
+        renderTeamRoster();
+    });
+
+    if (activePresenceListener) activePresenceListener();
+    activePresenceListener = db.collection('team_presence').onSnapshot(snapshot => {
+        teamPresence = {};
+        snapshot.forEach(doc => { teamPresence[doc.id] = doc.data(); });
+        const ownPresence = teamPresence[authenticatedAdmin?.uid];
+        if (ownPresence) {
+            document.getElementById('teamPresenceStatus').value = ownPresence.status || 'online';
+            document.getElementById('teamPresenceDot').className = `presence-dot ${presenceState(ownPresence)}`;
+        }
+        renderTeamRoster();
+    });
+
+    db.collection('chat_channels').orderBy('name').onSnapshot(snapshot => {
+        const list = document.getElementById('channelList');
+        const existing = new Set([...list.querySelectorAll('.chat-item-label')].map(item => item.innerText.toLowerCase()));
+        snapshot.forEach(doc => {
+            const channel = doc.data();
+            if (existing.has((channel.name || '').toLowerCase())) return;
+            const item = document.createElement('li');
+            item.className = 'chat-user-item';
+            item.onclick = () => selectChat('team', doc.id, channel.name, item);
+            item.innerHTML = `<span class="hash">#</span><span class="chat-item-label">${channel.name}</span>`;
+            list.appendChild(item);
+        });
+        filterTeamChat();
+    }, error => console.warn('Could not load channels:', error.message));
+}
+
+function updatePresenceStatus(status) {
+    if (!authenticatedAdmin) return;
+    db.collection('team_presence').doc(authenticatedAdmin.uid).set({
+        name: authenticatedAdmin.displayName || adminName,
+        email: authenticatedAdmin.email || '', status,
+        lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true }).catch(error => showToast('Could not update availability: ' + error.message));
+}
+
+function startPresenceHeartbeat() {
+    if (!authenticatedAdmin) return;
+    const statusSelect = document.getElementById('teamPresenceStatus');
+    const writePresence = () => updatePresenceStatus(statusSelect?.value || 'online');
+    writePresence();
+    clearInterval(presenceHeartbeat);
+    presenceHeartbeat = setInterval(writePresence, 60000);
+    window.addEventListener('beforeunload', () => {
+        db.collection('team_presence').doc(authenticatedAdmin.uid).set({ status: 'offline', lastSeen: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    }, { once: true });
+}
+
+function insertChatToken(type) {
+    const input = document.getElementById('teamChatInput');
+    const tokens = { code: '```\n// paste code here\n```', mention: '@', command: '/' };
+    input.value += (input.value ? '\n' : '') + tokens[type];
+    input.focus();
+    autoGrowChatInput(input);
+}
+
+function autoGrowChatInput(input) {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 140) + 'px';
+}
+
+function toggleMessagePriority() {
+    messagePriority = !messagePriority;
+    document.querySelector('.priority-btn')?.classList.toggle('active', messagePriority);
+    showToast(messagePriority ? 'Next message marked high priority.' : 'Priority removed.');
+}
+
+function togglePinnedMessages() { showToast('Pin messages from the message action menu.'); }
+function toggleChatDetails() { showToast(`${teamRoster.length} teammates in this workspace.`); }
+
 function loadClientList() {
     const clientList = document.getElementById('clientList');
     if (!clientList) return;
@@ -567,8 +692,9 @@ function selectChat(type, chatId, name, element) {
         document.getElementById('archiveClientButton').dataset.clientId = clientId;
         document.getElementById('deleteClientButton').dataset.clientId = clientId;
     } else {
-        const isChannel = ['general', 'design', 'backend-dev'].includes(name);
-        document.getElementById('teamChatHeader').innerHTML = isChannel ? `<span class="hash">#</span> ${name}` : `<img src="https://i.pravatar.cc/150?img=5" style="width:24px; height:24px; border-radius:50%; margin-right:5px;"> ${name}`;
+        const isChannel = chatId.startsWith('team_');
+        document.getElementById('teamChatHeader').innerHTML = isChannel ? `<span class="hash">#</span> ${name}` : `<span class="team-avatar small">${initials(name)}</span> ${name}`;
+        document.getElementById('teamChatMeta').innerText = isChannel ? 'Team channel' : 'Private conversation';
         document.getElementById('teamChatInput').placeholder = `Message ${name}...`;
     }
 
@@ -646,7 +772,7 @@ function renderMessage(doc, msgArea, type) {
 
     wrapper.innerHTML = `
                 <div class="message-info"><strong>${isSent ? 'You' : senderName}</strong> <span>${time}</span></div>
-                <div class="message">${formatMessage(m.text)}</div>
+                <div class="message ${m.priority ? 'priority-message' : ''}">${m.priority ? '<span class="priority-label"><i class="fas fa-bell"></i> Priority</span>' : ''}${formatMessage(m.text)}</div>
                 ${actionsHTML} ${reactionBarHTML} ${reactionsHTML} ${threadBtnHTML}
             `;
     msgArea.appendChild(wrapper);
@@ -672,6 +798,9 @@ function renderMessage(doc, msgArea, type) {
 
 function formatMessage(text) {
     if (!text) return '';
+    if (text.includes('```')) {
+        return text.replace(/```(?:[a-zA-Z0-9_+-]+)?\n?([\s\S]*?)```/g, '<pre class="code-block"><code>$1</code></pre>').replace(/\n/g, '<br>');
+    }
     let html = text.replace(/\*([^*]+)\*/g, '<strong>$1</strong>').replace(/_([^_]+)_/g, '<em>$1</em>');
     if (text.startsWith('/giphy')) {
         const query = text.split(' ').slice(1).join(' ');
@@ -685,13 +814,17 @@ function sendMessage(type) {
     const input = document.getElementById(inputId);
     if (input.value.trim() !== '') {
         db.collection('chats').doc(currentChatId).collection('messages').add({
-            text: input.value, sender: adminName,
+            text: input.value, sender: adminName, senderUid: authenticatedAdmin?.uid || '', senderName: authenticatedAdmin?.displayName || adminName,
+            priority: messagePriority,
             timestamp: firebase.firestore.FieldValue.serverTimestamp(), reactions: {}
         });
         input.value = '';
+        messagePriority = false;
+        document.querySelector('.priority-btn')?.classList.remove('active');
+        autoGrowChatInput(input);
     }
 }
-function handleChatSend(e, type) { if (e.key === 'Enter') sendMessage(type); }
+function handleChatSend(e, type) { if (e.key === 'Enter' && (type !== 'team' || !e.shiftKey)) { e.preventDefault(); sendMessage(type); } }
 
 function editMessage(id, type) {
     const wrapper = document.querySelector(`.message-wrapper[data-id="${id}"]`);
@@ -830,29 +963,18 @@ function addChannel() {
     const name = prompt("Enter new channel name:");
     if (name) {
         const id = 'team_' + name.replace(/\s+/g, '_').toLowerCase();
-        const list = document.getElementById('channelList');
-        const li = document.createElement('li');
-        li.className = 'chat-user-item';
-        li.onclick = function () { selectChat('team', id, name, this); };
-        li.innerHTML = `<span class="hash">#</span> ${name}`;
-        list.appendChild(li);
-        selectChat('team', id, name, li);
-        showToast(`Channel #${name} created!`);
+        db.collection('chat_channels').doc(id).set({ name: name.trim(), createdBy: authenticatedAdmin?.uid || '', createdAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true })
+            .then(() => showToast(`Channel #${name} created!`)).catch(error => showToast('Could not create channel: ' + error.message));
     }
 }
 
 function addDM() {
-    const name = prompt("Enter name of person to message:");
+    const name = prompt("Enter the teammate's name:");
     if (name) {
-        const id = 'dm_' + name.replace(/\s+/g, '_').toLowerCase();
-        const list = document.getElementById('dmList');
-        const li = document.createElement('li');
-        li.className = 'chat-user-item';
-        li.onclick = function () { selectChat('team', id, name, this); };
-        li.innerHTML = `<img src="https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 50) + 1}"><div><h4>${name}</h4></div>`;
-        list.appendChild(li);
-        selectChat('team', id, name, li);
-        showToast(`DM with ${name} started!`);
+        const member = teamRoster.find(item => item.name.toLowerCase() === name.trim().toLowerCase());
+        if (!member) return showToast('Choose a teammate from the People list.');
+        const item = [...document.querySelectorAll('#dmList .chat-user-item')].find(row => row.innerText.includes(member.name));
+        selectChat('team', 'dm_' + (member.presenceId || member.id).replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase(), member.name, item);
     }
 }
 
@@ -1749,6 +1871,10 @@ firebase.auth().onAuthStateChanged(async user => {
         }
 
         authenticatedAdmin = user;
+        document.getElementById('teamPresenceName').innerText = user.displayName || adminName;
+        document.getElementById('teamPresenceAvatar').innerText = initials(user.displayName || adminName);
+        loadTeamChat();
+        startPresenceHeartbeat();
         loadClientList();
         selectChat('team', 'team_general', 'general', document.querySelector('#teamChat .chat-user-item'));
         // User IS logged in, safe to load dashboard data

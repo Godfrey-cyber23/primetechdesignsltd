@@ -31,6 +31,16 @@ service cloud.firestore {
       allow delete: if isApprovedAdmin();
     }
 
+    match /team_presence/{userId} {
+      allow read: if isApprovedAdmin();
+      allow create, update: if isApprovedAdmin() && request.auth.uid == userId;
+      allow delete: if isApprovedAdmin() && request.auth.uid == userId;
+    }
+
+    match /chat_channels/{channelId} {
+      allow read, write: if isApprovedAdmin();
+    }
+
     match /clients/{clientId} {
       allow create: if request.auth != null
                     && request.auth.uid == clientId;
