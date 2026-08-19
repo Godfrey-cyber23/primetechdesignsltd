@@ -132,10 +132,6 @@ function loginUser(e) {
     const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value;
     const attempts = getLoginAttempts(email);
-    if (attempts >= MAX_LOGIN_ATTEMPTS) {
-        showMsg('loginError', 'This account is locked after 3 failed attempts. A super administrator must unlock it.');
-        return;
-    }
     setLoading('loginBtn', true, 'Sign In');
 
     firebase.auth().signInWithEmailAndPassword(email, password)
@@ -147,7 +143,7 @@ function loginUser(e) {
             const nextAttempts = getLoginAttempts(email) + 1;
             localStorage.setItem(loginAttemptKey(email), String(nextAttempts));
             showMsg('loginError', nextAttempts >= MAX_LOGIN_ATTEMPTS
-                ? '3 failed attempts. This account is locked until a super administrator unlocks it.'
+                ? 'Three failed attempts were recorded in this browser. Firebase will enforce any server-side rate limit; try again after the administrator unlocks the account.'
                 : `${authErrorMessage(err)} ${MAX_LOGIN_ATTEMPTS - nextAttempts} attempt(s) remaining.`);
             setLoading('loginBtn', false, 'Sign In');
             authRedirectInProgress = false;
