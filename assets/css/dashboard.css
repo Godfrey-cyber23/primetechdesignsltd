@@ -832,15 +832,30 @@ body {
 .thread-input {
     padding: 12px;
     border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
 }
 
 .thread-input input {
-    width: 100%;
+    flex: 1;
     padding: 8px 12px;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 8px;
     color: var(--text);
+}
+
+.thread-send-btn {
+    width: 38px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--bubble-sent);
+    color: #fff;
+    cursor: pointer;
+}
+
+.thread-send-btn:hover {
+    filter: brightness(1.12);
 }
 
 .typing-indicator {

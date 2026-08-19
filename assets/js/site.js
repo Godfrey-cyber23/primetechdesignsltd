@@ -900,11 +900,19 @@
             renderMessage({ text: "Hi there! 👋 Welcome to Primetech Designs. How can we help you today?", sender: 'bot', time: getTime(), id: 'welcome' });
             setTimeout(showQuickReplies, 600);
 
-            if (publicChatName) {
-                ensurePublicChatUser().then(startChatListener).catch(error => {
-                    console.error('Anonymous chat authentication error:', error);
-                });
-            }
+            firebase.auth().onAuthStateChanged(user => {
+                if (user && user.isAnonymous) {
+                    publicChatUser = user;
+                    startChatListener(user);
+                    return;
+                }
+
+                if (!user && publicChatName) {
+                    ensurePublicChatUser().catch(error => {
+                        console.error('Anonymous chat authentication error:', error);
+                    });
+                }
+            });
 
             function openChat() {
                 lcWindow.classList.add('open');

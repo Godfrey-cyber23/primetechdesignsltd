@@ -775,17 +775,32 @@ function closeThread() {
 }
 
 function handleThreadSend(e) {
-    if (e.key === 'Enter') {
-        const input = document.getElementById('threadInput');
-        if (input.value.trim() !== '' && currentThreadMsgId) {
-            db.collection('chats').doc(currentChatId).collection('messages').doc(currentThreadMsgId).collection('replies').add({
-                text: input.value, sender: adminName, timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            db.collection('chats').doc(currentChatId).collection('messages').doc(currentThreadMsgId).set({
-                threadCount: firebase.firestore.FieldValue.increment(1)
-            }, { merge: true });
-            input.value = '';
-        }
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendThreadReply();
+    }
+}
+
+async function sendThreadReply() {
+    const input = document.getElementById('threadInput');
+    const text = input.value.trim();
+    if (!text || !currentThreadMsgId) return;
+
+    try {
+        const messageRef = db.collection('chats').doc(currentChatId)
+            .collection('messages').doc(currentThreadMsgId);
+        await messageRef.collection('replies').add({
+            text,
+            sender: adminName,
+            senderName: adminName,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        await messageRef.set({
+            threadCount: firebase.firestore.FieldValue.increment(1)
+        }, { merge: true });
+        input.value = '';
+    } catch (error) {
+        showToast('Could not send reply: ' + error.message);
     }
 }
 
