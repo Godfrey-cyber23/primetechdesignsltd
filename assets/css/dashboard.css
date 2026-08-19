@@ -401,6 +401,8 @@ body {
 }
 
 .chat-user-item {
+    position: relative;
+    overflow: visible;
     padding: 8px 16px;
     display: flex;
     align-items: center;
@@ -475,6 +477,15 @@ body {
 }
 
 .client-actions button.danger {
+    color: var(--danger);
+}
+
+.client-header-action:disabled {
+    cursor: not-allowed;
+    opacity: 0.35;
+}
+
+.client-header-action.danger:hover:not(:disabled) {
     color: var(--danger);
 }
 

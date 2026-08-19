@@ -135,6 +135,10 @@
                             <div class="chat-header-actions">
                                 <button onclick="startCall('audio')"><i class="fas fa-phone"></i></button>
                                 <button onclick="startCall('video')"><i class="fas fa-video"></i></button>
+                                <button id="archiveClientButton" class="client-header-action" title="Archive client" disabled
+                                    onclick="archiveSelectedClient()"><i class="fas fa-archive"></i></button>
+                                <button id="deleteClientButton" class="client-header-action danger" title="Delete client" disabled
+                                    onclick="deleteSelectedClient()"><i class="fas fa-trash"></i></button>
                             </div>
                         </div>
                         <div class="chat-messages" id="clientChatMessages"></div>

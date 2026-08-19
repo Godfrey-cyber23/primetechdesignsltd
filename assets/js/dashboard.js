@@ -512,6 +512,16 @@ function archiveClient(clientId) {
         .catch(error => showToast('Could not archive client: ' + error.message));
 }
 
+function archiveSelectedClient() {
+    const clientId = document.getElementById('archiveClientButton').dataset.clientId;
+    if (clientId) archiveClient(clientId);
+}
+
+function deleteSelectedClient() {
+    const clientId = document.getElementById('deleteClientButton').dataset.clientId;
+    if (clientId) deleteClient(clientId);
+}
+
 function restoreClient(clientId) {
     db.collection('clients').doc(clientId).update({ status: 'active', updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
         .then(() => showToast('Client restored.'))
@@ -551,6 +561,11 @@ function selectChat(type, chatId, name, element) {
     if (type === 'client') {
         document.getElementById('clientChatHeader').innerHTML = `<i class="fas fa-lock" style="font-size:0.7rem; color:var(--text-muted);"></i> ${name}`;
         document.getElementById('clientChatInput').placeholder = `Message ${name}...`;
+        const clientId = chatId.replace(/^client_/, '');
+        document.getElementById('archiveClientButton').disabled = false;
+        document.getElementById('deleteClientButton').disabled = false;
+        document.getElementById('archiveClientButton').dataset.clientId = clientId;
+        document.getElementById('deleteClientButton').dataset.clientId = clientId;
     } else {
         const isChannel = ['general', 'design', 'backend-dev'].includes(name);
         document.getElementById('teamChatHeader').innerHTML = isChannel ? `<span class="hash">#</span> ${name}` : `<img src="https://i.pravatar.cc/150?img=5" style="width:24px; height:24px; border-radius:50%; margin-right:5px;"> ${name}`;
@@ -570,13 +585,37 @@ function selectChat(type, chatId, name, element) {
     activeMessageListener = db.collection('chats').doc(chatId).collection('messages').orderBy('timestamp', 'asc').onSnapshot(snapshot => {
         msgArea.innerHTML = '';
         if (snapshot.empty) {
-            msgArea.innerHTML = '<div style="text-align:center; color:var(--text-muted); margin-top:40px;"><i class="fas fa-comments" style="font-size:2rem; display:block; margin-bottom:10px;"></i>No messages yet.</div>';
+            const visitorId = chatId.replace(/^client_/, '');
+            db.collection('chats').doc('client').collection('messages')
+                .where('visitorId', '==', visitorId)
+                .get()
+                .then(legacySnapshot => {
+                    if (legacySnapshot.empty) {
+                        msgArea.innerHTML = '<div style="text-align:center; color:var(--text-muted); margin-top:40px;"><i class="fas fa-comments" style="font-size:2rem; display:block; margin-bottom:10px;"></i>No messages yet.</div>';
+                        return;
+                    }
+                    legacySnapshot.docs
+                        .sort((a, b) => {
+                            const first = a.data().timestamp ? a.data().timestamp.toMillis() : 0;
+                            const second = b.data().timestamp ? b.data().timestamp.toMillis() : 0;
+                            return first - second;
+                        })
+                        .forEach(message => renderMessage(message, msgArea, type));
+                    msgArea.scrollTop = msgArea.scrollHeight;
+                })
+                .catch(error => {
+                    console.error('Legacy conversation lookup error:', error);
+                    msgArea.innerHTML = '<div style="text-align:center; color:var(--danger); margin-top:40px;">Unable to load this conversation history.</div>';
+                });
             return;
         }
         snapshot.forEach(doc => {
             renderMessage(doc, msgArea, type);
         });
         msgArea.scrollTop = msgArea.scrollHeight;
+    }, error => {
+        console.error('Conversation history error:', error);
+        msgArea.innerHTML = '<div style="text-align:center; color:var(--danger); margin-top:40px;">Unable to load this conversation.</div>';
     });
 }
 
@@ -598,6 +637,7 @@ function renderMessage(doc, msgArea, type) {
                 </div>` : `
                 <div class="message-actions">
                     <button class="action-btn" onclick="openThread('${msgId}')" title="Reply in thread"><i class="fas fa-reply"></i></button>
+                    ${type === 'client' ? `<button class="action-btn" onclick="deleteMessage('${msgId}', '${type}')" title="Delete"><i class="fas fa-trash"></i></button>` : ''}
                 </div>`;
 
     let reactionsHTML = '<div class="applied-reactions" id="reactions_' + msgId + '"></div>';
