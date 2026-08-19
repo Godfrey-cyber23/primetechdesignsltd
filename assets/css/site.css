@@ -1877,33 +1877,59 @@
                 padding: 80px 16px 40px;
             }
 
-            .services-grid,
-            .team-grid,
-            .process-grid,
-            .testimonial-grid {
-                grid-template-columns: 1fr 1fr;
-            }
-
             .info-grid {
                 grid-template-columns: 1fr;
             }
 
             .services-grid,
+            .team-grid,
+            .process-grid,
+            .tech-grid,
             .testimonial-grid,
-            .process-grid {
-                grid-template-columns: 1fr;
+            .insights-grid,
+            .projects-slider-container {
+                display: flex;
+                flex-wrap: nowrap;
+                gap: 14px;
+                overflow-x: auto;
+                overscroll-behavior-x: contain;
+                padding: 8px 16px 18px;
+                scroll-behavior: smooth;
+                scroll-snap-type: x mandatory;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .services-grid > *,
+            .team-grid > *,
+            .process-grid > *,
+            .tech-grid > *,
+            .testimonial-grid > *,
+            .insights-grid > *,
+            .projects-slider-container > * {
+                flex: 0 0 min(82vw, 300px);
+                scroll-snap-align: start;
+            }
+
+            .tech-grid > * {
+                flex-basis: 100px;
+            }
+
+            .projects-slider-container {
+                mask-image: none;
+                -webkit-mask-image: none;
+            }
+
+            .projects-track {
+                width: max-content;
+                animation: none;
+            }
+
+            .projects-slider-container > .projects-track {
+                flex: 0 0 max-content;
             }
 
             .form-row {
                 grid-template-columns: 1fr;
-            }
-
-            .project-card {
-                flex: 0 0 220px;
-            }
-
-            .projects-track {
-                animation-duration: 30s;
             }
 
             .contact-wrapper {
@@ -2006,6 +2032,14 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 20px;
+        }
+
+        .mobile-carousel {
+            scrollbar-width: none;
+        }
+
+        .mobile-carousel::-webkit-scrollbar {
+            display: none;
         }
 
         .insight-card {

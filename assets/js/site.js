@@ -38,6 +38,61 @@
   
         document.addEventListener('DOMContentLoaded', () => {
 
+            // Mobile content carousels retain touch scrolling while advancing gently when idle.
+            function setupMobileCarousels() {
+                const carouselSelectors = [
+                    '.services-grid',
+                    '.team-grid',
+                    '.projects-slider-container',
+                    '.process-grid',
+                    '.tech-grid',
+                    '.testimonial-grid',
+                    '.insights-grid'
+                ];
+                const carousels = carouselSelectors
+                    .map(selector => document.querySelector(selector))
+                    .filter(Boolean);
+                const mobileQuery = window.matchMedia('(max-width: 768px)');
+                const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+                carousels.forEach(carousel => {
+                    carousel.classList.add('mobile-carousel');
+                    let paused = false;
+                    let timer;
+
+                    const stop = () => {
+                        paused = true;
+                        clearInterval(timer);
+                    };
+                    const start = () => {
+                        clearInterval(timer);
+                        paused = false;
+                        if (!mobileQuery.matches || reducedMotionQuery.matches) return;
+                        timer = setInterval(() => {
+                            if (paused || carousel.scrollWidth <= carousel.clientWidth) return;
+                            const step = carousel.clientWidth * 0.82 + 14;
+                            const atEnd = carousel.scrollLeft + carousel.clientWidth >= carousel.scrollWidth - 4;
+                            carousel.scrollTo({ left: atEnd ? 0 : carousel.scrollLeft + step, behavior: 'smooth' });
+                        }, 3600);
+                    };
+
+                    ['mouseenter', 'focusin', 'touchstart', 'pointerdown'].forEach(eventName => {
+                        carousel.addEventListener(eventName, stop, { passive: true });
+                    });
+                    ['mouseleave', 'focusout', 'touchend', 'pointerup', 'pointercancel'].forEach(eventName => {
+                        carousel.addEventListener(eventName, start, { passive: true });
+                    });
+                    carousel.addEventListener('scroll', () => {
+                        if (paused) return;
+                        clearTimeout(carousel._resumeTimer);
+                        carousel._resumeTimer = setTimeout(start, 900);
+                    }, { passive: true });
+                    start();
+                });
+            }
+
+            setupMobileCarousels();
+
             // ---- Year ----
             document.getElementById('year').textContent = new Date().getFullYear();
 
