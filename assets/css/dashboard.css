@@ -1066,6 +1066,67 @@ body {
     display: flex;
 }
 
+.branded-dialog {
+    width: min(100% - 32px, 430px);
+    padding: 28px;
+    text-align: center;
+    background: var(--modal-bg);
+    border: 1px solid var(--border-hover);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+}
+
+.branded-dialog-icon {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 14px;
+    border-radius: 50%;
+    color: var(--accent);
+    background: rgba(0, 212, 255, 0.1);
+    font-size: 1.2rem;
+}
+
+.branded-dialog h3 {
+    margin-bottom: 8px;
+    font-family: 'Space Grotesk', sans-serif;
+}
+
+.branded-dialog p {
+    margin-bottom: 20px;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+
+.branded-dialog form input {
+    width: 100%;
+    padding: 11px 12px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    outline: none;
+    color: var(--text);
+    background: var(--surface);
+}
+
+.branded-dialog form input:focus {
+    border-color: var(--accent);
+}
+
+.branded-dialog-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.branded-dialog-actions button {
+    flex: 1;
+}
+
+.branded-dialog-actions-single button {
+    flex: 0 0 100%;
+}
+
 .call-video-container {
     width: 100%;
     max-width: 800px;
@@ -1516,4 +1577,4 @@ body {
     border: 1px solid var(--border);
     border-radius: 8px;
     color: var(--text);
-}
+}

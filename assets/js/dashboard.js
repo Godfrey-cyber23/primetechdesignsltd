@@ -215,6 +215,46 @@ function executeConfirmAction() {
     closeConfirmModal();
 }
 
+let inputModalCallback = null;
+
+function showBrandedInput(title, message, placeholder, callback, iconClass = 'fas fa-pen') {
+    document.getElementById('inputModalTitle').innerText = title;
+    document.getElementById('inputModalMessage').innerText = message;
+    document.getElementById('inputModalField').placeholder = placeholder;
+    document.getElementById('inputModalField').value = '';
+    document.getElementById('inputModalIcon').className = iconClass;
+    inputModalCallback = callback;
+    document.getElementById('inputActionModal').classList.add('active');
+    setTimeout(() => document.getElementById('inputModalField').focus(), 0);
+}
+
+function closeInputModal() {
+    document.getElementById('inputActionModal').classList.remove('active');
+    inputModalCallback = null;
+}
+
+function submitInputModal(event) {
+    event.preventDefault();
+    const value = document.getElementById('inputModalField').value.trim();
+    if (!value) return;
+    const callback = inputModalCallback;
+    closeInputModal();
+    if (callback) callback(value);
+}
+
+function showBrandedNotice(title, message, iconClass = 'fas fa-circle-info', iconColor = 'var(--accent)') {
+    document.getElementById('noticeModalTitle').innerText = title;
+    document.getElementById('noticeModalMessage').innerText = message;
+    const icon = document.getElementById('noticeModalIcon');
+    icon.className = iconClass;
+    icon.style.color = iconColor;
+    document.getElementById('noticeModal').classList.add('active');
+}
+
+function closeBrandedNotice() {
+    document.getElementById('noticeModal').classList.remove('active');
+}
+
 function savePortfolioProject(e) {
     e.preventDefault();
     const id = document.getElementById('pId').value;
@@ -377,9 +417,9 @@ function markLeadRead(id, isRead) {
 }
 
 function deleteLead(id) {
-    if (confirm("Delete this submission?")) {
+    showConfirmModal('Delete submission?', 'This contact submission will be permanently removed.', () => {
         db.collection('contact_submissions').doc(id).delete();
-    }
+    }, 'Delete', 'fas fa-trash', 'var(--danger)');
 }
 
 db.collection('contact_submissions').orderBy('timestamp', 'desc').onSnapshot(snapshot => {
@@ -397,7 +437,7 @@ db.collection('contact_submissions').orderBy('timestamp', 'desc').onSnapshot(sna
                 <tr class="${isRead ? '' : 'unread'}">
                     <td>${s.name}</td>
                     <td>${s.email}</td>
-                    <td style="cursor: pointer;" onclick="alert('Message from ${s.name}:\\n\\n${s.message}')">${s.subject}</td>
+                    <td style="cursor: pointer;" onclick="showBrandedNotice('Message from ${escapeHtml(s.name)}', '${escapeHtml(s.message || '').replace(/\\n/g, '<br>')}')">${s.subject}</td>
                     <td>${date}</td>
                     <td>
                         <button class="btn-success" onclick="markLeadRead('${doc.id}', ${isRead})">
@@ -423,9 +463,9 @@ function addTeamMember(e) {
 }
 
 function deleteTeamMember(id) {
-    if (confirm("Remove this team member?")) {
+    showConfirmModal('Remove profile details?', 'This removes the optional public profile details. The admin will remain in People.', () => {
         db.collection('team_members').doc(id).delete();
-    }
+    }, 'Remove', 'fas fa-user-minus', 'var(--danger)');
 }
 
 db.collection('team_members').onSnapshot(snapshot => {
@@ -493,14 +533,33 @@ function filterTeamChat() {
 }
 
 function loadTeamChat() {
-    const membersByKey = {};
-    db.collection('team_members').onSnapshot(snapshot => {
-        snapshot.forEach(doc => {
-            const member = doc.data();
-            membersByKey[(member.name || doc.id).toLowerCase()] = { ...member, id: doc.id, presenceId: member.uid || member.email || doc.id };
+    let approvedAdmins = [];
+    let profileDetails = [];
+    const renderApprovedRoster = () => {
+        const detailsByEmail = new Map(profileDetails.map(member => [String(member.email || '').toLowerCase(), member]));
+        teamRoster = approvedAdmins.map(admin => {
+            const profile = detailsByEmail.get(String(admin.email || '').toLowerCase()) || {};
+            return {
+                ...profile,
+                ...admin,
+                name: admin.displayName || profile.name || admin.email || 'Team member',
+                role: profile.role || 'Admin',
+                img: profile.img || admin.photoURL || '',
+                presenceId: admin.uid,
+                email: admin.email || profile.email || ''
+            };
         });
-        teamRoster = Object.values(membersByKey);
         renderTeamRoster();
+    };
+
+    db.collection('admin_users').where('status', '==', 'approved').onSnapshot(snapshot => {
+        approvedAdmins = snapshot.docs.map(doc => ({ ...doc.data(), uid: doc.id }));
+        renderApprovedRoster();
+    }, error => showBrandedNotice('People unavailable', 'Approved admin profiles could not be loaded.', 'fas fa-users-slash', 'var(--danger)'));
+
+    db.collection('team_members').onSnapshot(snapshot => {
+        profileDetails = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+        renderApprovedRoster();
     });
 
     if (activePresenceListener) activePresenceListener();
@@ -654,26 +713,27 @@ function restoreClient(clientId) {
 }
 
 async function deleteClient(clientId) {
-    if (!confirm('Delete this client and all of their chat messages permanently?')) return;
-    try {
-        const chatRef = db.collection('chats').doc('client_' + clientId);
-        const messages = await chatRef.collection('messages').get();
-        const batch = db.batch();
-        for (const message of messages.docs) {
-            const replies = await message.ref.collection('replies').get();
-            replies.docs.forEach(reply => batch.delete(reply.ref));
-            batch.delete(message.ref);
+    showConfirmModal('Delete client?', 'This permanently removes the client and all associated chat messages.', async () => {
+        try {
+            const chatRef = db.collection('chats').doc('client_' + clientId);
+            const messages = await chatRef.collection('messages').get();
+            const batch = db.batch();
+            for (const message of messages.docs) {
+                const replies = await message.ref.collection('replies').get();
+                replies.docs.forEach(reply => batch.delete(reply.ref));
+                batch.delete(message.ref);
+            }
+            batch.delete(db.collection('clients').doc(clientId));
+            batch.delete(chatRef);
+            await batch.commit();
+            if (currentChatId === 'client_' + clientId) {
+                document.getElementById('clientChatMessages').innerHTML = '<div style="text-align:center; color:var(--text-muted); margin-top:40px;">Select a client to view messages.</div>';
+            }
+            showToast('Client and messages deleted.');
+        } catch (error) {
+            showToast('Could not delete client: ' + error.message);
         }
-        batch.delete(db.collection('clients').doc(clientId));
-        batch.delete(chatRef);
-        await batch.commit();
-        if (currentChatId === 'client_' + clientId) {
-            document.getElementById('clientChatMessages').innerHTML = '<div style="text-align:center; color:var(--text-muted); margin-top:40px;">Select a client to view messages.</div>';
-        }
-        showToast('Client and messages deleted.');
-    } catch (error) {
-        showToast('Could not delete client: ' + error.message);
-    }
+    }, 'Delete client', 'fas fa-user-slash', 'var(--danger)');
 }
 
 function selectChat(type, chatId, name, element) {
@@ -829,16 +889,16 @@ function handleChatSend(e, type) { if (e.key === 'Enter' && (type !== 'team' || 
 function editMessage(id, type) {
     const wrapper = document.querySelector(`.message-wrapper[data-id="${id}"]`);
     const oldText = wrapper.querySelector('.message').innerText;
-    const newText = prompt("Edit message:", oldText);
-    if (newText !== null && newText.trim() !== '') {
+    showBrandedInput('Edit message', 'Update the message content below.', 'Message text', newText => {
         db.collection('chats').doc(currentChatId).collection('messages').doc(id).update({ text: newText });
-    }
+    }, 'fas fa-pen-to-square');
+    document.getElementById('inputModalField').value = oldText;
 }
 
 function deleteMessage(id, type) {
-    if (confirm("Delete this message?")) {
+    showConfirmModal('Delete message?', 'This message will be removed from the conversation.', () => {
         db.collection('chats').doc(currentChatId).collection('messages').doc(id).delete();
-    }
+    }, 'Delete', 'fas fa-trash', 'var(--danger)');
 }
 
 async function addReaction(msgId, emoji) {
@@ -960,22 +1020,20 @@ function handleFileUpload(event, type) {
 }
 
 function addChannel() {
-    const name = prompt("Enter new channel name:");
-    if (name) {
+    showBrandedInput('Create channel', 'Give your team channel a clear, memorable name.', 'e.g. frontend', name => {
         const id = 'team_' + name.replace(/\s+/g, '_').toLowerCase();
         db.collection('chat_channels').doc(id).set({ name: name.trim(), createdBy: authenticatedAdmin?.uid || '', createdAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true })
             .then(() => showToast(`Channel #${name} created!`)).catch(error => showToast('Could not create channel: ' + error.message));
-    }
+    }, 'fas fa-hashtag');
 }
 
 function addDM() {
-    const name = prompt("Enter the teammate's name:");
-    if (name) {
+    showBrandedInput('Start a direct message', 'Enter the exact name of an approved admin.', 'Teammate name', name => {
         const member = teamRoster.find(item => item.name.toLowerCase() === name.trim().toLowerCase());
         if (!member) return showToast('Choose a teammate from the People list.');
         const item = [...document.querySelectorAll('#dmList .chat-user-item')].find(row => row.innerText.includes(member.name));
         selectChat('team', 'dm_' + (member.presenceId || member.id).replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase(), member.name, item);
-    }
+    }, 'fas fa-message');
 }
 
 // === CALLS ===
@@ -986,7 +1044,7 @@ async function startCall(type) {
         document.getElementById('callVideo').srcObject = callStream;
         document.getElementById('callModal').classList.add('active');
         document.getElementById('callName').innerText = type === 'video' ? 'Video Call Connected' : 'Voice Call Connected';
-    } catch (err) { alert("Camera/Mic access denied. Use HTTPS or localhost."); }
+    } catch (err) { showBrandedNotice('Call unavailable', 'Camera and microphone access requires HTTPS or localhost, and browser permission.', 'fas fa-video-slash', 'var(--danger)'); }
 }
 function endCall() { if (callStream) callStream.getTracks().forEach(t => t.stop()); document.getElementById('callModal').classList.remove('active'); }
 function toggleMute() { if (callStream) callStream.getAudioTracks().forEach(t => t.enabled = !t.enabled); }

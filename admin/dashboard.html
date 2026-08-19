@@ -787,6 +787,34 @@
         </div>
     </div>
 
+    <!-- === BRANDED INPUT MODAL === -->
+    <div class="call-modal" id="inputActionModal" style="align-items: center; justify-content: center;">
+        <div class="card branded-dialog" role="dialog" aria-modal="true" aria-labelledby="inputModalTitle">
+            <div class="branded-dialog-icon"><i class="fas fa-pen" id="inputModalIcon"></i></div>
+            <h3 id="inputModalTitle">Enter a value</h3>
+            <p id="inputModalMessage">Provide the requested value to continue.</p>
+            <form onsubmit="submitInputModal(event)">
+                <input type="text" id="inputModalField" autocomplete="off" required>
+                <div class="branded-dialog-actions">
+                    <button type="button" class="btn-secondary" onclick="closeInputModal()">Cancel</button>
+                    <button type="submit" class="btn-primary">Continue</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- === BRANDED NOTICE MODAL === -->
+    <div class="call-modal" id="noticeModal" style="align-items: center; justify-content: center;">
+        <div class="card branded-dialog" role="dialog" aria-modal="true" aria-labelledby="noticeModalTitle">
+            <div class="branded-dialog-icon"><i class="fas fa-circle-info" id="noticeModalIcon"></i></div>
+            <h3 id="noticeModalTitle">Primetech OS</h3>
+            <p id="noticeModalMessage"></p>
+            <div class="branded-dialog-actions branded-dialog-actions-single">
+                <button type="button" class="btn-primary" onclick="closeBrandedNotice()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- === EXPORT & SHARE MODAL === -->
     <div class="call-modal" id="projectExportModal" style="align-items:center; justify-content:center;">
         <div class="card" style="width:100%; max-width:450px; background:var(--modal-bg);">
@@ -837,4 +865,4 @@
     <script src="../assets/js/dashboard.js"></script>
 </body>
 
-</html>
+</html>

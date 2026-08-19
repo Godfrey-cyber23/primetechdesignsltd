@@ -24,7 +24,7 @@ service cloud.firestore {
     match /admin_users/{userId} {
       allow create: if isAdmin() && request.auth.uid == userId
                     && (request.resource.data.status == 'pending' || isBootstrapAdmin());
-      allow read: if isAdmin() && request.auth.uid == userId;
+      allow read: if isApprovedAdmin();
       allow update: if isApprovedAdmin()
               || (isAdmin() && request.auth.uid == userId
                 && request.resource.data.status == resource.data.status);
