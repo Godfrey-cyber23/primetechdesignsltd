@@ -791,8 +791,22 @@
                 </button>
             </div>
         </div>
-        <div class="lc-window__body" id="lcBody"></div>
-        <div class="lc-window__footer">
+        <div class="lc-window__body" id="lcBody">
+            <div class="lc-name-gate" id="lcNameGate">
+                <div class="lc-name-gate__icon"><i class="fas fa-user-circle"></i></div>
+                <h4>Welcome to Primetech Designs</h4>
+                <p>Tell us your name so our team knows who they are speaking with.</p>
+                <form id="lcNameForm">
+                    <label for="lcNameInput">Your name</label>
+                    <input id="lcNameInput" type="text" maxlength="80" autocomplete="name"
+                        placeholder="Enter your name" required />
+                    <button type="submit">Start chatting <i class="fas fa-arrow-right"></i></button>
+                    <div class="lc-name-gate__error" id="lcNameError" role="alert"></div>
+                </form>
+            </div>
+            <div id="lcMessages" class="lc-messages" aria-live="polite"></div>
+        </div>
+        <div class="lc-window__footer" id="lcFooter" hidden>
             <input type="text" id="lcInput" placeholder="Type your message..." autocomplete="off" />
             <button id="lcSend" aria-label="Send message">
                 <i class="fas fa-paper-plane"></i>

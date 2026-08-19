@@ -2409,6 +2409,89 @@
             scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
         }
 
+        .lc-name-gate {
+            margin: auto 0;
+            padding: 18px 4px;
+            text-align: center;
+        }
+
+        .lc-name-gate__icon {
+            color: var(--accent);
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .lc-name-gate h4 {
+            color: var(--text);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1rem;
+            margin-bottom: 7px;
+        }
+
+        .lc-name-gate p {
+            color: var(--text-muted);
+            font-size: 0.76rem;
+            line-height: 1.5;
+            margin-bottom: 16px;
+        }
+
+        .lc-name-gate form {
+            display: grid;
+            gap: 8px;
+            text-align: left;
+        }
+
+        .lc-name-gate label {
+            color: var(--text-muted);
+            font-size: 0.7rem;
+        }
+
+        .lc-name-gate input {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--input-bg);
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            color: var(--text);
+            font: inherit;
+            font-size: 0.8rem;
+        }
+
+        .lc-name-gate input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .lc-name-gate button {
+            padding: 10px 12px;
+            border: 0;
+            border-radius: 9px;
+            background: var(--gradient);
+            color: #fff;
+            cursor: pointer;
+            font: inherit;
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+
+        .lc-name-gate button:disabled {
+            cursor: wait;
+            opacity: 0.65;
+        }
+
+        .lc-name-gate__error {
+            min-height: 16px;
+            color: var(--danger);
+            font-size: 0.7rem;
+        }
+
+        .lc-messages {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-height: 100%;
+        }
+
         .lc-window__body::-webkit-scrollbar {
             width: 5px;
         }

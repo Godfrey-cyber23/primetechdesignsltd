@@ -13,23 +13,21 @@
 
         let publicChatUser = null;
         let publicChatName = localStorage.getItem('publicChatName') || '';
+        let publicChatAuthPromise = null;
 
         function ensurePublicChatUser() {
             if (publicChatUser) return Promise.resolve(publicChatUser);
-            return firebase.auth().signInAnonymously().then(result => {
+            if (firebase.auth().currentUser && firebase.auth().currentUser.isAnonymous) {
+                publicChatUser = firebase.auth().currentUser;
+                return Promise.resolve(publicChatUser);
+            }
+            if (publicChatAuthPromise) return publicChatAuthPromise;
+            publicChatAuthPromise = firebase.auth().signInAnonymously().then(result => {
                 publicChatUser = result.user;
                 return publicChatUser;
             });
         }
 
-        function getPublicChatName() {
-            if (publicChatName) return publicChatName;
-            const name = window.prompt('Before we start, what is your name?');
-            if (!name || !name.trim()) return '';
-            publicChatName = name.trim().slice(0, 80);
-            localStorage.setItem('publicChatName', publicChatName);
-            return publicChatName;
-        }
   
         document.addEventListener('DOMContentLoaded', () => {
 
@@ -638,7 +636,53 @@
             const lcWindow = document.getElementById('lcWindow');
             const lcClose = document.getElementById('lcClose');
             const lcBody = document.getElementById('lcBody');
+            const lcMessages = document.getElementById('lcMessages');
+            const lcNameGate = document.getElementById('lcNameGate');
+            const lcNameForm = document.getElementById('lcNameForm');
+            const lcNameInput = document.getElementById('lcNameInput');
+            const lcNameError = document.getElementById('lcNameError');
+            const lcFooter = document.getElementById('lcFooter');
             const lcInput = document.getElementById('lcInput');
+
+            function setChatReady(name) {
+                publicChatName = name;
+                localStorage.setItem('publicChatName', publicChatName);
+                lcNameGate.hidden = true;
+                lcFooter.hidden = false;
+            }
+
+            if (publicChatName) {
+                setChatReady(publicChatName);
+            }
+
+            lcNameForm.addEventListener('submit', async function (event) {
+                event.preventDefault();
+                const name = lcNameInput.value.trim().slice(0, 80);
+                if (!name) {
+                    lcNameError.textContent = 'Please enter your name to continue.';
+                    return;
+                }
+
+                const submitButton = lcNameForm.querySelector('button');
+                submitButton.disabled = true;
+                lcNameError.textContent = '';
+                try {
+                    const visitor = await ensurePublicChatUser();
+                    await db.collection('clients').doc(visitor.uid).set({
+                        name: name,
+                        visitorId: visitor.uid,
+                        status: 'active',
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    }, { merge: true });
+                    setChatReady(name);
+                    lcInput.focus();
+                } catch (error) {
+                    console.error('Chat setup error:', error);
+                    lcNameError.textContent = 'Chat is temporarily unavailable. Please try again.';
+                } finally {
+                    submitButton.disabled = false;
+                }
+            });
             const lcSend = document.getElementById('lcSend');
             const lcBadge = document.getElementById('lcBadge');
 
@@ -673,8 +717,8 @@
                 const el = document.createElement('div');
                 el.className = 'lc-msg lc-msg--' + msg.sender;
                 el.innerHTML = msg.text.replace(/\n/g, '<br>') + '<span class="lc-msg__time">' + msg.time + '</span>';
-                lcBody.appendChild(el);
-                lcBody.scrollTop = lcBody.scrollHeight;
+                lcMessages.appendChild(el);
+                lcMessages.scrollTop = lcMessages.scrollHeight;
             }
 
             function showTyping() {
@@ -682,8 +726,8 @@
                 el.className = 'lc-typing';
                 el.id = 'lcTyping';
                 el.innerHTML = '<span></span><span></span><span></span>';
-                lcBody.appendChild(el);
-                lcBody.scrollTop = lcBody.scrollHeight;
+                lcMessages.appendChild(el);
+                lcMessages.scrollTop = lcMessages.scrollHeight;
             }
 
             function hideTyping() {
@@ -706,8 +750,8 @@
                     });
                     container.appendChild(btn);
                 });
-                lcBody.appendChild(container);
-                lcBody.scrollTop = lcBody.scrollHeight;
+                lcMessages.appendChild(container);
+                lcMessages.scrollTop = lcMessages.scrollHeight;
             }
 
             function getBotResponse(text) {
@@ -722,8 +766,11 @@
             }
 
             async function handleUserMessage(text) {
-                const senderName = getPublicChatName();
-                if (!senderName) return;
+                const senderName = publicChatName;
+                if (!senderName) {
+                    lcNameInput.focus();
+                    return;
+                }
                 const visitor = await ensurePublicChatUser();
                 const chatId = 'client_' + visitor.uid;
                 await db.collection('clients').doc(visitor.uid).set({
@@ -766,7 +813,7 @@
                 if (!user || !user.isAnonymous) return;
                 const chatId = 'client_' + user.uid;
                 db.collection('chats').doc(chatId).collection('messages').orderBy('timestamp').onSnapshot(snapshot => {
-                lcBody.innerHTML = '';
+                lcMessages.innerHTML = '';
 
                 if (snapshot.empty) {
                     renderMessage({ text: "Hi there! 👋 Welcome to Primetech Designs. How can we help you today?", sender: 'bot', time: getTime() });
@@ -780,7 +827,7 @@
                     const sender = (m.sender === "Client") ? 'user' : 'bot';
                     renderMessage({ text: m.text, sender: sender, time: time });
                 });
-                lcBody.scrollTop = lcBody.scrollHeight;
+                lcMessages.scrollTop = lcMessages.scrollHeight;
                 });
             });
 
