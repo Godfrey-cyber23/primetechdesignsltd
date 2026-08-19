@@ -11,6 +11,39 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
+        const analyticsSessionId = sessionStorage.getItem('primetechAnalyticsSession') ||
+            `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        sessionStorage.setItem('primetechAnalyticsSession', analyticsSessionId);
+        const analyticsSessionStartedAt = Number(sessionStorage.getItem('primetechAnalyticsStartedAt')) || Date.now();
+        sessionStorage.setItem('primetechAnalyticsStartedAt', String(analyticsSessionStartedAt));
+        let analyticsSessionEnded = false;
+
+        function trackAnalyticsEvent(type, extra = {}) {
+            return db.collection('analytics_events').add({
+                type,
+                sessionId: analyticsSessionId,
+                path: window.location.pathname,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                ...extra
+            }).catch(error => console.warn('Analytics event was not recorded:', error.message));
+        }
+
+        trackAnalyticsEvent('page_view');
+        if (!sessionStorage.getItem('primetechAnalyticsStarted')) {
+            sessionStorage.setItem('primetechAnalyticsStarted', 'true');
+            trackAnalyticsEvent('session_start');
+        }
+
+        function closeAnalyticsSession() {
+            if (analyticsSessionEnded) return;
+            analyticsSessionEnded = true;
+            trackAnalyticsEvent('session_end', {
+                durationSeconds: Math.max(0, Math.round((Date.now() - analyticsSessionStartedAt) / 1000))
+            });
+        }
+
+        window.addEventListener('pagehide', closeAnalyticsSession, { once: true });
+
         let publicChatUser = null;
         let publicChatName = localStorage.getItem('publicChatName') || '';
         let publicChatListenerStarted = false;

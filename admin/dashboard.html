@@ -333,19 +333,12 @@
 
                     <hr style="border-color: var(--border); margin: 24px 0;">
 
-                    <div class="card-title" style="margin-bottom: 10px;">Analytics Configuration</div>
-                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px;">Manually update your
-                        site statistics, or integrate Google Analytics later.</p>
-                    <form id="analyticsForm" onsubmit="saveAnalytics(event)">
-                        <div class="form-group"><label>Total Page Views</label><input type="number" id="setViews"
-                                placeholder="1245"></div>
-                        <div class="form-group"><label>Avg. Session Duration</label><input type="text" id="setDur"
-                                placeholder="3m 24s"></div>
-                        <div class="form-group"><label>Bounce Rate (%)</label><input type="number" id="setBounce"
-                                placeholder="42"></div>
-                        <button type="submit" class="btn-primary"><i class="fas fa-chart-line"></i> Update
-                            Stats</button>
-                    </form>
+                        <div class="card-title" style="margin-bottom: 10px;">Live Analytics</div>
+                        <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px;">These values are
+                        collected automatically from real website visits and sessions.</p>
+                        <div class="form-group"><label>Total Page Views</label><input type="number" id="setViews" readonly></div>
+                        <div class="form-group"><label>Avg. Session Duration</label><input type="text" id="setDur" readonly></div>
+                        <div class="form-group"><label>Bounce Rate (%)</label><input type="number" id="setBounce" readonly></div>
                 </div>
             </div>
         </div>

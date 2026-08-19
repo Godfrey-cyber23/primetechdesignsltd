@@ -107,6 +107,15 @@ service cloud.firestore {
       allow write: if isApprovedAdmin();
     }
 
+    match /analytics_events/{eventId} {
+      allow create: if request.resource.data.type in ['page_view', 'session_start', 'session_end']
+                    && request.resource.data.sessionId is string
+                    && request.resource.data.path is string
+                    && request.resource.data.timestamp is timestamp;
+      allow read: if isApprovedAdmin();
+      allow update, delete: if isApprovedAdmin();
+    }
+
     match /project_counters/{counterId} {
       allow read, write: if isApprovedAdmin();
     }

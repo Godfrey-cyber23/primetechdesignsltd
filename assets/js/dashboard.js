@@ -109,46 +109,51 @@ function switchView(viewId, btn) {
 // FIREBASE: DASHBOARD STATS & ANALYTICS
 // ==========================================
 function initDashboardStats() {
-    // 1. Listen for general site analytics document
-    db.collection('analytics').doc('overview').onSnapshot(doc => {
-        let data = doc.exists ? doc.data() : null;
-        if (!data) {
-            db.collection('analytics').doc('overview').set({
-                pageViews: 1245, avgDuration: "3m 24s", bounceRate: 42,
-                trafficData: [120, 190, 150, 280, 210, 340, 245],
-                topPages: [
-                    { name: 'Home', percentage: 65 },
-                    { name: 'Services', percentage: 20 },
-                    { name: 'Portfolio', percentage: 10 },
-                    { name: 'Contact', percentage: 5 }
-                ]
-            });
-            return;
+    db.collection('analytics_events').orderBy('timestamp', 'desc').limit(5000).onSnapshot(snapshot => {
+        const events = snapshot.docs.map(doc => doc.data()).filter(event => event.timestamp);
+        const pageViews = events.filter(event => event.type === 'page_view');
+        const sessionStarts = events.filter(event => event.type === 'session_start');
+        const sessionEnds = events.filter(event => event.type === 'session_end' && Number(event.durationSeconds) >= 0);
+        const sessionIds = new Set(pageViews.map(event => event.sessionId));
+        const sessions = sessionStarts.length ? new Set(sessionStarts.map(event => event.sessionId)) : sessionIds;
+        const durations = sessionEnds.map(event => Number(event.durationSeconds)).filter(Number.isFinite);
+        const averageSeconds = durations.length ? Math.round(durations.reduce((sum, value) => sum + value, 0) / durations.length) : 0;
+        const bouncedSessions = [...sessions].filter(sessionId => pageViews.filter(event => event.sessionId === sessionId).length === 1).length;
+        const bounceRate = sessions.size ? Math.round((bouncedSessions / sessions.size) * 100) : 0;
+        const pathCounts = pageViews.reduce((counts, event) => {
+            counts[event.path] = (counts[event.path] || 0) + 1;
+            return counts;
+        }, {});
+        const topPages = Object.entries(pathCounts)
+            .sort((first, second) => second[1] - first[1])
+            .slice(0, 5)
+            .map(([path, count]) => ({ name: formatAnalyticsPath(path), percentage: pageViews.length ? Math.round((count / pageViews.length) * 100) : 0 }));
+        const trafficData = [];
+        const trafficLabels = [];
+        for (let offset = 6; offset >= 0; offset--) {
+            const day = new Date();
+            day.setHours(0, 0, 0, 0);
+            day.setDate(day.getDate() - offset);
+            const nextDay = new Date(day);
+            nextDay.setDate(day.getDate() + 1);
+            trafficLabels.push(day.toLocaleDateString([], { weekday: 'short' }));
+            trafficData.push(pageViews.filter(event => {
+                const timestamp = event.timestamp.toDate();
+                return timestamp >= day && timestamp < nextDay;
+            }).length);
         }
-
-        document.getElementById('statPageViews').innerText = data.pageViews || 0;
-        document.getElementById('statDuration').innerText = data.avgDuration || '0s';
-        document.getElementById('statBounce').innerText = (data.bounceRate || 0) + '%';
-
-        const topPagesHTML = data.topPages.map(page => `
-                    <div style="display: flex; justify-content: space-between;">
-                        <span style="font-size: 0.85rem;">${page.name}</span>
-                        <span style="font-size: 0.85rem; color: var(--accent);">${page.percentage}%</span>
-                    </div>
-                    <div style="height: 6px; background: var(--bg); border-radius: 4px; margin-bottom: 10px;">
-                        <div style="width: ${page.percentage}%; height: 100%; background: var(--gradient); border-radius: 4px;"></div>
-                    </div>
-                `).join('');
-        document.getElementById('topPagesList').innerHTML = topPagesHTML;
-
-        if (trafficChartInstance) trafficChartInstance.destroy();
-        initCharts(data);
-        chartsInitialized = true;
-
-        // Populate settings forms
-        document.getElementById('setViews').value = data.pageViews || 0;
-        document.getElementById('setDur').value = data.avgDuration || '';
-        document.getElementById('setBounce').value = data.bounceRate || 0;
+        const analytics = {
+            pageViews: pageViews.length,
+            avgDuration: formatAnalyticsDuration(averageSeconds),
+            bounceRate,
+            trafficData,
+            trafficLabels,
+            topPages: topPages.length ? topPages : [{ name: 'No page views yet', percentage: 0 }]
+        };
+        renderLiveAnalytics(analytics);
+    }, error => {
+        console.error('Live analytics error:', error);
+        showToast('Live analytics are unavailable. Check the analytics Firestore rules.');
     });
 
     // 2. Listen for actual leads (Count unread contact submissions)
@@ -162,12 +167,43 @@ function initDashboardStats() {
     });
 }
 
+function formatAnalyticsPath(path) {
+    if (path === '/' || path === '/index.html') return 'Home';
+    return path.replace(/^\//, '').replace(/[-_]/g, ' ').replace(/\.html$/, '').replace(/\b\w/g, character => character.toUpperCase());
+}
+
+function formatAnalyticsDuration(seconds) {
+    if (!seconds) return '0s';
+    const minutes = Math.floor(seconds / 60);
+    return minutes ? `${minutes}m ${seconds % 60}s` : `${seconds}s`;
+}
+
+function renderLiveAnalytics(data) {
+    document.getElementById('statPageViews').innerText = data.pageViews;
+    document.getElementById('statDuration').innerText = data.avgDuration;
+    document.getElementById('statBounce').innerText = data.bounceRate + '%';
+    document.getElementById('topPagesList').innerHTML = data.topPages.map(page => `
+        <div style="display: flex; justify-content: space-between;">
+            <span style="font-size: 0.85rem;">${escapeHtml(page.name)}</span>
+            <span style="font-size: 0.85rem; color: var(--accent);">${page.percentage}%</span>
+        </div>
+        <div style="height: 6px; background: var(--bg); border-radius: 4px; margin-bottom: 10px;">
+            <div style="width: ${page.percentage}%; height: 100%; background: var(--gradient); border-radius: 4px;"></div>
+        </div>`).join('');
+    if (trafficChartInstance) trafficChartInstance.destroy();
+    initCharts(data);
+    chartsInitialized = true;
+    document.getElementById('setViews').value = data.pageViews;
+    document.getElementById('setDur').value = data.avgDuration;
+    document.getElementById('setBounce').value = data.bounceRate;
+}
+
 function initCharts(data) {
     const ctx1 = document.getElementById('trafficChart');
     if (ctx1) trafficChartInstance = new Chart(ctx1, {
         type: 'line',
         data: {
-            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            labels: data.trafficLabels || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
             datasets: [{ data: data.trafficData, borderColor: '#00D4FF', backgroundColor: 'rgba(0, 212, 255, 0.1)', fill: true, tension: 0.4 }]
         },
         options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
@@ -190,15 +226,6 @@ function saveSettings(e) {
         phone: document.getElementById('setPhone').value,
         location: document.getElementById('setLocation').value
     }, { merge: true }).then(() => showToast("Site settings saved! Live site updated."));
-}
-
-function saveAnalytics(e) {
-    e.preventDefault();
-    db.collection('analytics').doc('overview').set({
-        pageViews: Number(document.getElementById('setViews').value),
-        avgDuration: document.getElementById('setDur').value,
-        bounceRate: Number(document.getElementById('setBounce').value)
-    }, { merge: true }).then(() => showToast("Analytics updated!"));
 }
 
 // Load Site Settings into form
