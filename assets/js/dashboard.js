@@ -48,21 +48,53 @@ function toggleChatSidebar(id) {
     document.getElementById(id).classList.toggle('mobile-active');
 }
 
+function toggleNavGroup(button) {
+    const group = button.closest('.nav-group');
+    const expanded = button.getAttribute('aria-expanded') === 'true';
+    button.setAttribute('aria-expanded', String(!expanded));
+    group.classList.toggle('collapsed', expanded);
+}
+
+function toggleSidebarMinimized() {
+    const sidebar = document.getElementById('sidebar');
+    const minimized = sidebar.classList.toggle('minimized');
+    localStorage.setItem('primetech-sidebar-minimized', String(minimized));
+    const button = document.querySelector('.sidebar-collapse-btn');
+    button.title = minimized ? 'Expand navigation' : 'Minimize navigation';
+    button.setAttribute('aria-label', button.title);
+}
+
+function restoreSidebarState() {
+    if (localStorage.getItem('primetech-sidebar-minimized') === 'true' && window.innerWidth > 768) {
+        toggleSidebarMinimized();
+    }
+}
+
+restoreSidebarState();
+
 // === VIEW SWITCHER ===
 function switchView(viewId, btn) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById(viewId).classList.add('active');
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     btn.classList.add('active');
+    const group = btn.closest('.nav-group');
+    if (group?.classList.contains('collapsed')) {
+        const section = group.querySelector('.nav-section-title');
+        section.setAttribute('aria-expanded', 'true');
+        group.classList.remove('collapsed');
+    }
 
     const titles = {
         dashboard: ['Dashboard Overview', "Welcome back! Here's what's happening today."],
         clientMessages: ['Client Messages', 'Chat directly with your website leads.'],
         teamChat: ['Team Communication', 'Slack-style internal chat.'],
+        projectForms: ['Project Workspace', 'Manage delivery, documents, and project lifecycle.'],
+        crm: ['Lead Pipeline', 'Review and manage incoming opportunities.'],
+        portfolio: ['Portfolio Manager', 'Publish and maintain your public work.'],
         siteSettings: ['Website Settings', 'Update global site content dynamically.'],
-        portfolio: ['Portfolio Manager', 'Add or remove projects from the live site.'],
-        crm: ['Lead CRM', 'View and manage contact form submissions.'],
-        team: ['Team Members', 'Add or remove team members from the live site.']
+        team: ['Team Directory', 'View approved admins and their availability.'],
+        myProfile: ['My Profile', 'Update your personal and team directory information.']
     };
     document.getElementById('pageTitle').innerText = titles[viewId][0];
     document.getElementById('pageSubtitle').innerText = titles[viewId][1];
@@ -449,45 +481,94 @@ db.collection('contact_submissions').orderBy('timestamp', 'desc').onSnapshot(sna
     });
 });
 
-// ==========================================
-// FIREBASE: TEAM MEMBERS
-// ==========================================
-function addTeamMember(e) {
-    e.preventDefault();
-    db.collection('team_members').add({
-        name: tName.value, role: tRole.value, bio: tBio.value, img: tImg.value
-    }).then(() => {
-        teamForm.reset();
-        showToast("Team member added to live site!");
-    });
-}
-
-function deleteTeamMember(id) {
-    showConfirmModal('Remove profile details?', 'This removes the optional public profile details. The admin will remain in People.', () => {
-        db.collection('team_members').doc(id).delete();
-    }, 'Remove', 'fas fa-user-minus', 'var(--danger)');
-}
-
-db.collection('team_members').onSnapshot(snapshot => {
+function loadTeamDirectory() {
+    db.collection('admin_users').where('status', '==', 'approved').onSnapshot(async snapshot => {
     const list = document.getElementById('teamListHtml');
-    list.innerHTML = '';
-    if (snapshot.empty) {
-        list.innerHTML = '<p style="color: var(--text-muted); text-align: center;">No team members added yet.</p>';
-        return;
-    }
-    snapshot.forEach(doc => {
-        const m = doc.data();
-        list.innerHTML += `
-                <div class="list-item">
-                    <img src="${m.img}" onerror="this.src='https://via.placeholder.com/40'">
-                    <div class="list-info">
-                        <h4>${m.name}</h4>
-                        <p>${m.role}</p>
-                    </div>
-                    <button class="btn-danger" onclick="deleteTeamMember('${doc.id}')"><i class="fas fa-trash"></i></button>
-                </div>`;
+    if (!list) return;
+    const profileSnapshot = await db.collection('team_members').get();
+    const profiles = new Map(profileSnapshot.docs.map(doc => [String(doc.data().email || '').toLowerCase(), doc.data()]));
+    const admins = snapshot.docs.map(doc => {
+        const admin = doc.data();
+        const profile = profiles.get(String(admin.email || '').toLowerCase()) || {};
+        return { ...profile, ...admin, uid: doc.id, name: admin.displayName || profile.name || admin.email || 'Team member', role: profile.role || admin.jobTitle || 'Admin' };
     });
-});
+    document.getElementById('teamStatTotal').innerText = admins.length;
+    document.getElementById('teamStatActive').innerText = admins.filter(member => member.bio).length;
+    document.getElementById('teamStatImages').innerText = admins.filter(member => member.img || member.photoURL).length;
+    document.getElementById('teamStatRoles').innerText = new Set(admins.map(member => member.role)).size;
+    list.innerHTML = admins.length ? admins.map(member => `
+        <div class="list-item team-directory-item">
+            ${member.img || member.photoURL ? `<img src="${escapeHtml(member.img || member.photoURL)}" onerror="this.style.display='none'">` : `<div class="team-avatar">${initials(member.name)}</div>`}
+            <div class="list-info"><h4>${escapeHtml(member.name)}</h4><p>${escapeHtml(member.role)} · ${escapeHtml(member.email || '')}</p></div>
+            <span class="directory-status"><span class="presence-dot ${presenceState(teamPresence[member.uid])}"></span>${presenceState(teamPresence[member.uid])}</span>
+            ${authenticatedAdmin?.uid === member.uid ? '<button class="btn-primary" onclick="openMyProfile()" title="Edit your profile"><i class="fas fa-pen"></i></button>' : ''}
+        </div>`).join('') : '<p style="color: var(--text-muted); text-align: center;">No approved admins yet.</p>';
+    filterTeamMembers();
+    }, error => console.error('Team directory error:', error));
+}
+
+function filterTeamMembers() {
+    const query = (document.getElementById('teamSearch')?.value || '').toLowerCase();
+    document.querySelectorAll('#teamListHtml .team-directory-item').forEach(item => {
+        item.style.display = item.innerText.toLowerCase().includes(query) ? 'flex' : 'none';
+    });
+}
+
+async function loadAdminProfile() {
+    if (!authenticatedAdmin) return;
+    const [adminSnapshot, publicSnapshot] = await Promise.all([
+        db.collection('admin_users').doc(authenticatedAdmin.uid).get(),
+        db.collection('team_members').doc(authenticatedAdmin.uid).get()
+    ]);
+    const admin = adminSnapshot.exists ? adminSnapshot.data() : {};
+    const publicProfile = publicSnapshot.exists ? publicSnapshot.data() : {};
+    const name = admin.displayName || authenticatedAdmin.displayName || adminName;
+    const role = admin.jobTitle || publicProfile.role || 'Admin';
+    document.getElementById('profileName').value = name;
+    document.getElementById('profileEmail').value = authenticatedAdmin.email || admin.email || '';
+    document.getElementById('profileRole').value = role;
+    document.getElementById('profilePhone').value = admin.phone || publicProfile.phone || '';
+    document.getElementById('profilePhoto').value = admin.photoURL || publicProfile.img || '';
+    document.getElementById('profileBio').value = admin.bio || publicProfile.bio || '';
+    document.getElementById('profileSummaryName').innerText = name;
+    document.getElementById('profileSummaryRole').innerText = role;
+    document.getElementById('profileAvatarLarge').innerText = initials(name);
+}
+
+function openMyProfile() {
+    const profileButton = [...document.querySelectorAll('.nav-item')].find(button => button.innerText.includes('My') && button.innerText.includes('Profile'));
+    switchView('myProfile', profileButton);
+    loadAdminProfile().catch(error => showToast('Could not load profile: ' + error.message));
+}
+
+async function saveAdminProfile(event) {
+    event.preventDefault();
+    if (!authenticatedAdmin) return;
+    const name = document.getElementById('profileName').value.trim();
+    const role = document.getElementById('profileRole').value.trim() || 'Admin';
+    const phone = document.getElementById('profilePhone').value.trim();
+    const photoURL = document.getElementById('profilePhoto').value.trim();
+    const bio = document.getElementById('profileBio').value.trim();
+    try {
+        await db.collection('admin_users').doc(authenticatedAdmin.uid).set({
+            displayName: name, jobTitle: role, phone, photoURL, bio,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+        await db.collection('team_members').doc(authenticatedAdmin.uid).set({
+            uid: authenticatedAdmin.uid, email: authenticatedAdmin.email || '', name,
+            role, phone, img: photoURL, bio, updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+        await authenticatedAdmin.updateProfile({ displayName: name, photoURL: photoURL || null });
+        document.getElementById('profileSummaryName').innerText = name;
+        document.getElementById('profileSummaryRole').innerText = role;
+        document.getElementById('profileAvatarLarge').innerText = initials(name);
+        document.getElementById('teamPresenceName').innerText = name;
+        document.getElementById('teamPresenceAvatar').innerText = initials(name);
+        showToast('Profile updated successfully.');
+    } catch (error) {
+        showToast('Could not save profile: ' + error.message);
+    }
+}
 
 // ==========================================
 // CHAT LOGIC (CLIENT & TEAM)
@@ -1929,6 +2010,8 @@ firebase.auth().onAuthStateChanged(async user => {
         }
 
         authenticatedAdmin = user;
+        loadAdminProfile().catch(error => console.warn('Could not load admin profile:', error.message));
+        loadTeamDirectory();
         document.getElementById('teamPresenceName').innerText = user.displayName || adminName;
         document.getElementById('teamPresenceAvatar').innerText = initials(user.displayName || adminName);
         loadTeamChat();

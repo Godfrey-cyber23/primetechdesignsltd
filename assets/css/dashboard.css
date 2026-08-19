@@ -44,7 +44,8 @@ body {
     position: fixed;
     height: 100vh;
     z-index: 100;
-    transition: transform 0.3s ease;
+    transition: width 0.3s ease, transform 0.3s ease;
+    overflow: hidden;
 }
 
 .logo {
@@ -56,6 +57,52 @@ body {
     gap: 10px;
     margin-bottom: 32px;
     padding: 0 8px;
+}
+
+.sidebar-brand {
+    min-height: 32px;
+}
+
+.sidebar-brand-name {
+    white-space: nowrap;
+}
+
+.sidebar-collapse-btn {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    margin-left: auto;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-muted);
+    background: transparent;
+    cursor: pointer;
+}
+
+.sidebar-collapse-btn:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
+.sidebar-scroll {
+    min-height: 0;
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-hover) transparent;
+}
+
+.sidebar-footer {
+    flex: 0 0 auto;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+}
+
+.nav-group {
+    margin-bottom: 2px;
 }
 
 .logo-icon {
@@ -79,9 +126,37 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    width: 100%;
+    padding: 0 8px;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+}
+
+.nav-section-title i {
+    font-size: 0.65rem;
+    transition: transform 0.2s ease;
+}
+
+.nav-section-title[aria-expanded="false"] i {
+    transform: rotate(-90deg);
+}
+
+.nav-group-items {
+    max-height: 300px;
+    overflow: hidden;
+    transition: max-height 0.25s ease, opacity 0.2s ease;
+}
+
+.nav-group.collapsed .nav-group-items {
+    max-height: 0;
+    opacity: 0;
 }
 
 .nav-item {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 12px;
@@ -123,9 +198,143 @@ body {
 .main-content {
     flex: 1;
     margin-left: 260px;
+    transition: margin-left 0.3s ease;
     padding: 32px;
     min-height: 100vh;
     width: calc(100% - 260px);
+}
+
+.sidebar.minimized {
+    width: 76px;
+    padding-left: 12px;
+    padding-right: 12px;
+}
+
+.sidebar.minimized + .main-content {
+    margin-left: 76px;
+    width: calc(100% - 76px);
+}
+
+.sidebar.minimized .sidebar-brand {
+    justify-content: center;
+    padding: 0;
+}
+
+.sidebar.minimized .sidebar-brand-name,
+.sidebar.minimized .nav-section-title span,
+.sidebar.minimized .nav-item > span:not(.badge),
+.sidebar.minimized .sidebar-footer span {
+    display: none;
+}
+
+.sidebar.minimized .sidebar-collapse-btn {
+    position: absolute;
+    top: 26px;
+    left: 42px;
+    width: 24px;
+    height: 24px;
+    background: var(--surface);
+}
+
+.sidebar.minimized .sidebar-collapse-btn i {
+    transform: rotate(180deg);
+}
+
+.sidebar.minimized .nav-section-title {
+    justify-content: center;
+    margin-left: 0;
+    margin-right: 0;
+    padding: 0;
+}
+
+.sidebar.minimized .nav-section-title i {
+    display: none;
+}
+
+.sidebar.minimized .nav-group-items {
+    max-height: 300px;
+    opacity: 1;
+}
+
+.sidebar.minimized .nav-item {
+    justify-content: center;
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+.sidebar.minimized .nav-item .badge {
+    position: absolute;
+    top: 2px;
+    right: 4px;
+    margin: 0;
+    padding: 1px 4px;
+    font-size: 0.55rem;
+}
+
+.profile-layout {
+    display: grid;
+    grid-template-columns: minmax(220px, 0.7fr) minmax(0, 1.6fr);
+    gap: 20px;
+}
+
+.profile-summary-card {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 280px;
+    text-align: center;
+}
+
+.profile-avatar-large {
+    display: grid;
+    place-items: center;
+    width: 92px;
+    height: 92px;
+    margin-bottom: 16px;
+    border: 3px solid var(--accent);
+    border-radius: 50%;
+    background: var(--bubble-sent);
+    color: #fff;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.profile-summary-card h2 {
+    margin-bottom: 5px;
+    font-family: 'Space Grotesk', sans-serif;
+}
+
+.profile-summary-card p {
+    margin-bottom: 14px;
+    color: var(--text-muted);
+}
+
+.profile-status,
+.directory-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-muted);
+    font-size: 0.72rem;
+}
+
+.form-help {
+    margin: -8px 0 20px;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+.team-directory-item .list-info {
+    min-width: 0;
+    flex: 1;
+}
+
+.team-directory-item .list-info p {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .header {
@@ -1254,6 +1463,10 @@ body {
 /* === RESPONSIVE === */
 @media (max-width: 992px) {
 
+    .profile-layout {
+        grid-template-columns: 1fr;
+    }
+
     .grid-4 {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -1272,6 +1485,53 @@ body {
 
     .sidebar.active {
         transform: translateX(0);
+    }
+
+    .sidebar.minimized {
+        width: 260px;
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .sidebar.minimized + .main-content {
+        margin-left: 0;
+        width: 100%;
+    }
+
+    .sidebar.minimized .sidebar-brand-name,
+    .sidebar.minimized .nav-section-title span,
+    .sidebar.minimized .nav-item > span:not(.badge),
+    .sidebar.minimized .sidebar-footer span {
+        display: initial;
+    }
+
+    .sidebar.minimized .sidebar-collapse-btn {
+        position: static;
+        width: 28px;
+        height: 28px;
+        background: transparent;
+    }
+
+    .sidebar.minimized .nav-section-title {
+        justify-content: space-between;
+        padding: 0 8px;
+    }
+
+    .sidebar.minimized .nav-section-title i {
+        display: initial;
+    }
+
+    .sidebar.minimized .nav-item {
+        justify-content: initial;
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    .sidebar.minimized .nav-item .badge {
+        position: static;
+        margin-left: auto;
+        padding: 2px 6px;
+        font-size: 0.65rem;
     }
 
     .main-content {
