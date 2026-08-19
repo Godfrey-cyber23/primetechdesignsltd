@@ -760,7 +760,7 @@
         /* ===== TEAM ===== */
         .team-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
             gap: 16px;
         }
 
@@ -782,7 +782,7 @@
 
         .team-img {
             position: relative;
-            height: 220px;
+            height: 160px;
             overflow: hidden;
         }
 
@@ -862,7 +862,7 @@
         /* ===== PROCESS ===== */
         .process-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
             gap: 14px;
         }
 
@@ -870,7 +870,7 @@
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: 12px;
-            padding: 20px 18px;
+            padding: 14px 12px;
             position: relative;
             transition: all 0.3s ease;
         }
@@ -1216,7 +1216,7 @@
         /* ===== TESTIMONIALS ===== */
         .testimonial-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 14px;
         }
 
@@ -1224,7 +1224,7 @@
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: 12px;
-            padding: 18px 16px;
+            padding: 14px 12px;
             transition: all 0.3s ease;
         }
 
@@ -2062,7 +2062,7 @@
         }
 
         .insight-img {
-            height: 160px;
+            height: 120px;
             overflow: hidden;
             position: relative;
         }
