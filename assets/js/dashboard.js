@@ -794,9 +794,14 @@ function escapeHtml(value) {
 function toggleClientActions(clientId, button) {
     const menu = document.getElementById('client-actions-' + clientId);
     document.querySelectorAll('.client-actions').forEach(item => {
-        if (item !== menu) item.style.display = 'none';
+        if (item !== menu) {
+            item.style.display = 'none';
+            item.closest('.chat-user-item')?.classList.remove('actions-open');
+        }
     });
-    menu.style.display = menu.style.display === 'none' ? 'flex' : 'none';
+    const isOpening = menu.style.display === 'none';
+    menu.style.display = isOpening ? 'flex' : 'none';
+    menu.closest('.chat-user-item')?.classList.toggle('actions-open', isOpening);
 }
 
 function archiveClient(clientId) {

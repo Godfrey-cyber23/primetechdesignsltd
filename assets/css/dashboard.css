@@ -715,6 +715,10 @@ body {
     color: var(--text);
 }
 
+.chat-user-item.actions-open {
+    z-index: 20;
+}
+
 .chat-user-item .hash {
     font-size: 0.9rem;
     opacity: 0.7;
