@@ -970,25 +970,27 @@
             margin: 0 auto;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 0;
         }
 
         .faq-item {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 12px;
+            border-bottom: 1px solid var(--border);
             overflow: hidden;
             transition: all 0.3s ease;
             flex-shrink: 0;
         }
 
+        .faq-item:last-child {
+            border-bottom: none;
+        }
+
         .faq-item:hover {
-            border-color: var(--border-hover);
+            background: var(--surface-2);
         }
 
         .faq-question {
             font-family: 'Space Grotesk', sans-serif;
-            padding: 16px 20px;
+            padding: 12px 0;
             cursor: pointer;
             display: flex;
             justify-content: space-between;
@@ -1000,6 +1002,7 @@
         .faq-question i {
             color: var(--accent);
             transition: transform 0.3s ease;
+            font-size: 0.75rem;
         }
 
         .faq-item.active .faq-question i {
@@ -1010,12 +1013,12 @@
             max-height: 0;
             overflow: hidden;
             transition: max-height 0.4s ease, padding 0.4s ease;
-            padding: 0 20px;
+            padding: 0;
         }
 
         .faq-item.active .faq-answer {
             max-height: 200px;
-            padding: 0 20px 16px;
+            padding: 0 0 12px;
         }
 
         .faq-answer p {
@@ -1888,8 +1891,7 @@
             .tech-grid,
             .testimonial-grid,
             .insights-grid,
-            .projects-slider-container,
-            .faq-container {
+            .projects-slider-container {
                 display: flex;
                 flex-wrap: nowrap;
                 gap: 14px;
@@ -1907,8 +1909,7 @@
             .tech-grid > *,
             .testimonial-grid > *,
             .insights-grid > *,
-            .projects-slider-container > *,
-            .faq-container > * {
+            .projects-slider-container > * {
                 flex: 0 0 min(82vw, 300px);
                 scroll-snap-align: start;
             }
