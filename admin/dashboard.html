@@ -119,21 +119,9 @@
                     <div class="chat-sidebar" id="clientSidebar">
                         <div class="chat-sidebar-section">
                             <div class="sidebar-header"><span>Clients</span><i class="fas fa-chevron-down"></i></div>
-                            <ul class="chat-user-list">
-                                <li class="chat-user-item active"
-                                    onclick="selectChat('client', 'client_mulenga', 'Mrs. Mulenga', this)"><img
-                                        src="https://i.pravatar.cc/150?img=47">
-                                    <div>
-                                        <h4>Mrs. Mulenga</h4>
-                                    </div>
-                                    <div class="presence-dot"></div>
-                                </li>
-                                <li class="chat-user-item"
-                                    onclick="selectChat('client', 'client_chanda', 'John Chanda', this)"><img
-                                        src="https://i.pravatar.cc/150?img=12">
-                                    <div>
-                                        <h4>John Chanda</h4>
-                                    </div>
+                            <ul class="chat-user-list" id="clientList">
+                                <li class="chat-user-item" style="justify-content:center; color:var(--text-muted);">
+                                    Loading clients...
                                 </li>
                             </ul>
                         </div>
@@ -142,8 +130,8 @@
                         <div class="chat-header">
                             <button class="menu-toggle" style="font-size: 1.2rem;"
                                 onclick="toggleChatSidebar('clientSidebar')"><i class="fas fa-bars"></i></button>
-                            <h4 id="clientChatHeader"><i class="fas fa-lock"
-                                    style="font-size:0.7rem; color:var(--text-muted);"></i> Mrs. Mulenga</h4>
+                                <h4 id="clientChatHeader"><i class="fas fa-lock"
+                                    style="font-size:0.7rem; color:var(--text-muted);"></i> Select a client</h4>
                             <div class="chat-header-actions">
                                 <button onclick="startCall('audio')"><i class="fas fa-phone"></i></button>
                                 <button onclick="startCall('video')"><i class="fas fa-video"></i></button>
@@ -158,7 +146,7 @@
                                 <input type="file" id="fileInputClient" style="display:none"
                                     onchange="handleFileUpload(event, 'client')">
                             </div>
-                            <input type="text" id="clientChatInput" placeholder="Message Mrs. Mulenga..."
+                            <input type="text" id="clientChatInput" placeholder="Select a client to reply..."
                                 oninput="handleTyping('client')" onkeypress="handleChatSend(event, 'client')">
                             <button class="chat-send-btn" onclick="sendMessage('client')"><i
                                     class="fas fa-paper-plane"></i></button>

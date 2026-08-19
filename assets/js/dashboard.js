@@ -446,10 +446,99 @@ db.collection('team_members').onSnapshot(snapshot => {
 // ==========================================
 // CHAT LOGIC (CLIENT & TEAM)
 // ==========================================
-document.addEventListener("DOMContentLoaded", () => {
-    // initDashboardStats();
-    selectChat('team', 'team_general', 'general', document.querySelector('#teamChat .chat-user-item'));
-});
+let activeClientListener = null;
+
+function loadClientList() {
+    const clientList = document.getElementById('clientList');
+    if (!clientList) return;
+    if (activeClientListener) activeClientListener();
+
+    activeClientListener = db.collection('clients').orderBy('updatedAt', 'desc').onSnapshot(snapshot => {
+        clientList.innerHTML = '';
+        const clients = snapshot.docs.filter(doc => doc.data().status !== 'deleted');
+        document.getElementById('leadBadge').textContent = clients.length;
+
+        if (!clients.length) {
+            clientList.innerHTML = '<li class="chat-user-item" style="justify-content:center; color:var(--text-muted);">No clients yet.</li>';
+            return;
+        }
+
+        clients.forEach(doc => {
+            const client = doc.data();
+            const name = client.name || 'Unnamed visitor';
+            const chatId = 'client_' + doc.id;
+            const item = document.createElement('li');
+            item.className = 'chat-user-item' + (client.status === 'archived' ? ' archived' : '');
+            item.innerHTML = `
+                <div class="client-avatar">${escapeHtml(name.charAt(0).toUpperCase())}</div>
+                <div style="min-width:0; flex:1;">
+                    <h4>${escapeHtml(name)}</h4>
+                    <small style="color:var(--text-muted);">${client.status === 'archived' ? 'Archived' : 'Active'}</small>
+                </div>
+                <button class="action-btn" title="Client actions" onclick="event.stopPropagation(); toggleClientActions('${doc.id}', this)">
+                    <i class="fas fa-ellipsis-v"></i>
+                </button>
+                <div class="client-actions" id="client-actions-${doc.id}" style="display:none;">
+                    ${client.status === 'archived'
+                        ? `<button onclick="event.stopPropagation(); restoreClient('${doc.id}')"><i class="fas fa-box-open"></i> Restore</button>`
+                        : `<button onclick="event.stopPropagation(); archiveClient('${doc.id}')"><i class="fas fa-archive"></i> Archive</button>`}
+                    <button class="danger" onclick="event.stopPropagation(); deleteClient('${doc.id}')"><i class="fas fa-trash"></i> Delete</button>
+                </div>`;
+            item.onclick = () => selectChat('client', chatId, name, item);
+            clientList.appendChild(item);
+        });
+    }, error => {
+        clientList.innerHTML = '<li class="chat-user-item" style="justify-content:center; color:var(--danger);">Unable to load clients.</li>';
+        console.error('Client list error:', error);
+    });
+}
+
+function escapeHtml(value) {
+    return String(value).replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
+}
+
+function toggleClientActions(clientId, button) {
+    const menu = document.getElementById('client-actions-' + clientId);
+    document.querySelectorAll('.client-actions').forEach(item => {
+        if (item !== menu) item.style.display = 'none';
+    });
+    menu.style.display = menu.style.display === 'none' ? 'flex' : 'none';
+}
+
+function archiveClient(clientId) {
+    db.collection('clients').doc(clientId).update({ status: 'archived', updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
+        .then(() => showToast('Client archived.'))
+        .catch(error => showToast('Could not archive client: ' + error.message));
+}
+
+function restoreClient(clientId) {
+    db.collection('clients').doc(clientId).update({ status: 'active', updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
+        .then(() => showToast('Client restored.'))
+        .catch(error => showToast('Could not restore client: ' + error.message));
+}
+
+async function deleteClient(clientId) {
+    if (!confirm('Delete this client and all of their chat messages permanently?')) return;
+    try {
+        const chatRef = db.collection('chats').doc('client_' + clientId);
+        const messages = await chatRef.collection('messages').get();
+        const batch = db.batch();
+        for (const message of messages.docs) {
+            const replies = await message.ref.collection('replies').get();
+            replies.docs.forEach(reply => batch.delete(reply.ref));
+            batch.delete(message.ref);
+        }
+        batch.delete(db.collection('clients').doc(clientId));
+        batch.delete(chatRef);
+        await batch.commit();
+        if (currentChatId === 'client_' + clientId) {
+            document.getElementById('clientChatMessages').innerHTML = '<div style="text-align:center; color:var(--text-muted); margin-top:40px;">Select a client to view messages.</div>';
+        }
+        showToast('Client and messages deleted.');
+    } catch (error) {
+        showToast('Could not delete client: ' + error.message);
+    }
+}
 
 function selectChat(type, chatId, name, element) {
     currentChatType = type;
@@ -1585,6 +1674,8 @@ firebase.auth().onAuthStateChanged(async user => {
         }
 
         authenticatedAdmin = user;
+        loadClientList();
+        selectChat('team', 'team_general', 'general', document.querySelector('#teamChat .chat-user-item'));
         // User IS logged in, safe to load dashboard data
         console.log("Admin authenticated:", user.email);
 

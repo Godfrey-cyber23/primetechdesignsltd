@@ -429,6 +429,55 @@ body {
     object-fit: cover;
 }
 
+.client-avatar {
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 28px;
+    border-radius: 50%;
+    background: var(--bubble-sent);
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.chat-user-item.archived {
+    opacity: 0.62;
+}
+
+.client-actions {
+    position: absolute;
+    right: 8px;
+    top: calc(100% - 4px);
+    z-index: 12;
+    flex-direction: column;
+    min-width: 126px;
+    padding: 4px;
+    background: var(--modal-bg);
+    border: 1px solid var(--border-hover);
+    border-radius: 6px;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+}
+
+.client-actions button {
+    border: 0;
+    padding: 7px 8px;
+    text-align: left;
+    color: var(--text);
+    background: transparent;
+    cursor: pointer;
+    font-size: 0.72rem;
+}
+
+.client-actions button:hover {
+    background: var(--surface-2);
+}
+
+.client-actions button.danger {
+    color: var(--danger);
+}
+
 .presence-dot {
     width: 8px;
     height: 8px;

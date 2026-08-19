@@ -19,9 +19,19 @@ service cloud.firestore {
       allow create: if isAdmin() && request.auth.uid == userId
                     && request.resource.data.status == 'pending';
       allow read: if isAdmin() && request.auth.uid == userId;
-        allow update: if isApprovedAdmin()
+      allow update: if isApprovedAdmin()
               || (isAdmin() && request.auth.uid == userId
                 && request.resource.data.status == resource.data.status);
+      allow delete: if isApprovedAdmin();
+    }
+
+    match /clients/{clientId} {
+      allow create, update: if request.auth != null
+                            && request.auth.uid == clientId;
+      allow read, delete: if isApprovedAdmin();
+    }
+
+    match /chats/{chatId} {
       allow delete: if isApprovedAdmin();
     }
 

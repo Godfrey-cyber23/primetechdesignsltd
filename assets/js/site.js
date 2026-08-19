@@ -725,7 +725,15 @@
                 const senderName = getPublicChatName();
                 if (!senderName) return;
                 const visitor = await ensurePublicChatUser();
-                await db.collection('chats').doc('client').collection('messages').add({
+                const chatId = 'client_' + visitor.uid;
+                await db.collection('clients').doc(visitor.uid).set({
+                    name: senderName,
+                    visitorId: visitor.uid,
+                    status: 'active',
+                    lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+                await db.collection('chats').doc(chatId).collection('messages').add({
                     text: text,
                     sender: "Client",
                     senderName: senderName,
@@ -738,7 +746,11 @@
                     showTyping();
                     setTimeout(async function () {
                         hideTyping();
-                        await db.collection('chats').doc('client').collection('messages').add({
+                        await db.collection('clients').doc(visitor.uid).set({
+                            lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        }, { merge: true });
+                        await db.collection('chats').doc(chatId).collection('messages').add({
                             text: botReply,
                             sender: "Bot",
                             senderName: 'Primetech Assistant',
@@ -749,7 +761,11 @@
                 }
             }
 
-            db.collection('chats').doc('client').collection('messages').orderBy('timestamp').onSnapshot(snapshot => {
+            ensurePublicChatUser();
+            firebase.auth().onAuthStateChanged(user => {
+                if (!user || !user.isAnonymous) return;
+                const chatId = 'client_' + user.uid;
+                db.collection('chats').doc(chatId).collection('messages').orderBy('timestamp').onSnapshot(snapshot => {
                 lcBody.innerHTML = '';
 
                 if (snapshot.empty) {
@@ -765,6 +781,7 @@
                     renderMessage({ text: m.text, sender: sender, time: time });
                 });
                 lcBody.scrollTop = lcBody.scrollHeight;
+                });
             });
 
             function openChat() {
