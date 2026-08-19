@@ -75,6 +75,8 @@ function createPendingAdminProfile(user) {
         displayName: user.displayName || '',
         provider: user.providerData[0] ? user.providerData[0].providerId : 'password',
         status: isBootstrapAdmin ? 'approved' : 'pending',
+        loginStatus: 'unlocked',
+        loginLocked: false,
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
@@ -98,7 +100,7 @@ async function continueToDashboard(user) {
     }
 
     const profile = profileSnapshot.data();
-    if (profile.loginLocked === true) {
+    if (profile.loginLocked === true || profile.loginStatus === 'locked') {
         await firebase.auth().signOut();
         authRedirectInProgress = false;
         showMsg('loginError', 'This account is locked. A super administrator must unlock it.');

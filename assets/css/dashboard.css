@@ -43,6 +43,19 @@
     vertical-align: middle;
 }
 
+.admin-unlock-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 6px;
+    padding: 3px 6px;
+    border-radius: 4px;
+    color: #06120a;
+    background: var(--success);
+    font-size: 0.62rem;
+    vertical-align: middle;
+}
+
 .admin-unlock-btn {
     width: auto;
     min-height: 34px;

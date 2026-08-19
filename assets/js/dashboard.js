@@ -674,9 +674,15 @@ function loadAdminCommandCenter() {
 
     db.collection('admin_users').onSnapshot(snapshot => {
         const members = snapshot.docs.map(doc => ({ ...doc.data(), uid: doc.id }));
+        members.filter(member => !member.loginStatus).forEach(member => {
+            db.collection('admin_users').doc(member.uid).update({
+                loginStatus: member.loginLocked === true ? 'locked' : 'unlocked',
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }).catch(error => console.warn('Could not normalize login status:', error.message));
+        });
         const pending = members.filter(member => member.status === 'pending');
         const managed = members.filter(member => member.uid !== BOOTSTRAP_ADMIN_UID && ['approved', 'suspended'].includes(member.status));
-        const lockedMembers = managed.filter(member => member.loginLocked === true);
+        const lockedMembers = managed.filter(member => member.loginLocked === true || member.loginStatus === 'locked');
         document.getElementById('pendingAdminBadge').innerText = pending.length;
         document.getElementById('lockedAdminCount').innerText = lockedMembers.length;
         const pendingMarkup = pending.length ? pending.map(member => `
@@ -693,11 +699,11 @@ function loadAdminCommandCenter() {
             </div>`).join('') : '<p class="form-help">No pending account requests.</p>';
         const managedMarkup = managed.length ? `<h4 style="margin:20px 0 8px;">Current members</h4>${managed.map(member => `
             <div class="list-item" style="align-items:flex-start; gap:12px;">
-                <div class="list-info"><h4>${escapeHtml(member.displayName || member.email || 'Member')} ${member.loginLocked ? '<span class="admin-lock-badge"><i class="fas fa-lock"></i> LOCKED</span>' : ''}</h4><p>${escapeHtml(member.email || '')} · ${escapeHtml(member.status)}</p></div>
+                <div class="list-info"><h4>${escapeHtml(member.displayName || member.email || 'Member')} ${member.loginLocked || member.loginStatus === 'locked' ? '<span class="admin-lock-badge"><i class="fas fa-lock"></i> LOCKED</span>' : '<span class="admin-unlock-badge"><i class="fas fa-unlock"></i> UNLOCKED</span>'}</h4><p>${escapeHtml(member.email || '')} · ${escapeHtml(member.status)} · Login: ${escapeHtml(member.loginStatus || (member.loginLocked ? 'locked' : 'unlocked'))}</p></div>
                 <select onchange="updateAdminMember('${member.uid}', this.value)">
                     ${['member', 'manager', 'admin'].map(role => `<option value="${role}" ${member.role === role ? 'selected' : ''}>${role}</option>`).join('')}
                 </select>
-                ${member.loginLocked ? `<button class="btn-success admin-unlock-btn" onclick="unlockAdmin('${member.uid}')" title="Unlock login"><i class="fas fa-unlock"></i> Unlock account</button>` : ''}
+                ${member.loginLocked || member.loginStatus === 'locked' ? `<button class="btn-success admin-unlock-btn" onclick="unlockAdmin('${member.uid}')" title="Unlock login"><i class="fas fa-unlock"></i> Unlock account</button>` : ''}
                 <button class="${member.status === 'suspended' ? 'btn-success' : 'btn-danger'}" onclick="updateAdminMember('${member.uid}', '${member.status === 'suspended' ? 'approved' : 'suspended'}')" title="${member.status === 'suspended' ? 'Restore access' : 'Suspend access'}"><i class="fas fa-${member.status === 'suspended' ? 'rotate-left' : 'ban'}"></i></button>
             </div>`).join('')}` : '';
         document.getElementById('adminApprovalList').innerHTML = pendingMarkup + managedMarkup;
@@ -748,7 +754,7 @@ async function updateAdminMember(uid, value) {
 async function unlockAdmin(uid) {
     if (!isSuperAdmin || uid === BOOTSTRAP_ADMIN_UID) return;
     try {
-        await db.collection('admin_users').doc(uid).update({ loginLocked: false, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+        await db.collection('admin_users').doc(uid).update({ loginLocked: false, loginStatus: 'unlocked', updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
         await recordAdminAudit('Unlocked admin login', uid, 'Login lock cleared by super admin');
         showToast('Login unlocked.');
     } catch (error) { showToast('Could not unlock account: ' + error.message); }

@@ -23,7 +23,8 @@ service cloud.firestore {
         || (isAdmin()
         && exists(/databases/$(database)/documents/admin_users/$(request.auth.uid))
         && get(/databases/$(database)/documents/admin_users/$(request.auth.uid)).data.status == 'approved'
-        && get(/databases/$(database)/documents/admin_users/$(request.auth.uid)).data.loginLocked != true);
+        && get(/databases/$(database)/documents/admin_users/$(request.auth.uid)).data.loginLocked != true
+        && get(/databases/$(database)/documents/admin_users/$(request.auth.uid)).data.loginStatus != 'locked');
     }
 
     match /admin_users/{userId} {
