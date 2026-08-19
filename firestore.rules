@@ -47,7 +47,12 @@ service cloud.firestore {
       allow create: if isApprovedAdmin()
                     && request.resource.data.callerId == request.auth.uid
                     && request.resource.data.calleeId is string;
-      allow read, update: if isCallParticipant(callId);
+      // The incoming-call listener queries by calleeId. Query rules must be
+      // expressible from the returned document, so do not use get() here.
+      allow read: if isApprovedAdmin()
+                  && (resource.data.callerId == request.auth.uid
+                    || resource.data.calleeId == request.auth.uid);
+      allow update: if isCallParticipant(callId);
       allow delete: if isCallParticipant(callId);
 
       match /{candidateCollection}/{candidateId} {
