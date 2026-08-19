@@ -37,6 +37,24 @@ service cloud.firestore {
       allow delete: if isApprovedAdmin() && request.auth.uid == userId;
     }
 
+    function isCallParticipant(callId) {
+      return isApprovedAdmin()
+        && (get(/databases/$(database)/documents/calls/$(callId)).data.callerId == request.auth.uid
+          || get(/databases/$(database)/documents/calls/$(callId)).data.calleeId == request.auth.uid);
+    }
+
+    match /calls/{callId} {
+      allow create: if isApprovedAdmin()
+                    && request.resource.data.callerId == request.auth.uid
+                    && request.resource.data.calleeId is string;
+      allow read, update: if isCallParticipant(callId);
+      allow delete: if isCallParticipant(callId);
+
+      match /{candidateCollection}/{candidateId} {
+        allow read, create: if isCallParticipant(callId);
+      }
+    }
+
     match /chat_channels/{channelId} {
       allow read, write: if isApprovedAdmin();
     }

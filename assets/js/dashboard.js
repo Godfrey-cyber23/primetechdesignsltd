@@ -1164,19 +1164,219 @@ function addDM() {
     }, 'fas fa-message');
 }
 
-// === CALLS ===
+// === TEAM WEBRTC CALLS ===
 let callStream = null;
+let callPeerConnection = null;
+let activeCall = null;
+let activeCallListener = null;
+let activeCandidateListener = null;
+let incomingCall = null;
+let incomingCallListener = null;
+let pendingRemoteCandidates = [];
+
+const webRtcConfig = {
+    iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' }
+    ]
+};
+
+function callTargetForCurrentChat() {
+    if (currentChatType !== 'team' || !currentChatId.startsWith('dm_')) return null;
+    return teamRoster.find(member => {
+        const memberId = (member.presenceId || member.id || '').replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
+        return `dm_${memberId}` === currentChatId;
+    }) || null;
+}
+
+function showCallUnavailable(message) {
+    showBrandedNotice('Call unavailable', message, 'fas fa-phone-slash', 'var(--danger)');
+}
+
+function showActiveCall(name, type) {
+    const remoteVideo = document.getElementById('remoteCallVideo');
+    remoteVideo.style.display = type === 'video' ? 'block' : 'none';
+    document.getElementById('callName').innerText = `${type === 'video' ? 'Video' : 'Voice'} call with ${name}`;
+    document.getElementById('callModal').classList.add('active');
+}
+
+function listenForRemoteCandidates(callRef, collectionName) {
+    if (activeCandidateListener) activeCandidateListener();
+    activeCandidateListener = callRef.collection(collectionName).onSnapshot(snapshot => {
+        snapshot.docChanges().forEach(change => {
+            if (change.type === 'added') {
+                const candidate = new RTCIceCandidate(change.doc.data());
+                if (callPeerConnection?.remoteDescription) {
+                    callPeerConnection.addIceCandidate(candidate).catch(error => {
+                        console.warn('Could not add remote ICE candidate:', error);
+                    });
+                } else {
+                    pendingRemoteCandidates.push(candidate);
+                }
+            }
+        });
+    });
+}
+
+async function flushRemoteCandidates() {
+    const candidates = pendingRemoteCandidates;
+    pendingRemoteCandidates = [];
+    for (const candidate of candidates) {
+        await callPeerConnection?.addIceCandidate(candidate).catch(error => {
+            console.warn('Could not add queued remote ICE candidate:', error);
+        });
+    }
+}
+
+function createCallPeerConnection(callRef, role, type) {
+    callPeerConnection = new RTCPeerConnection(webRtcConfig);
+    callStream.getTracks().forEach(track => callPeerConnection.addTrack(track, callStream));
+    callPeerConnection.onicecandidate = event => {
+        if (event.candidate) {
+            callRef.collection(role === 'caller' ? 'callerCandidates' : 'calleeCandidates').add(event.candidate.toJSON());
+        }
+    };
+    callPeerConnection.ontrack = event => {
+        const stream = event.streams[0];
+        document.getElementById('remoteCallVideo').srcObject = stream;
+        document.getElementById('remoteCallAudio').srcObject = stream;
+    };
+    callPeerConnection.onconnectionstatechange = () => {
+        if (['failed', 'disconnected', 'closed'].includes(callPeerConnection.connectionState)) endCall(false);
+    };
+    return callPeerConnection;
+}
+
 async function startCall(type) {
+    const target = callTargetForCurrentChat();
+    if (!target) {
+        showCallUnavailable('Open a direct message with a teammate before starting a call.');
+        return;
+    }
+    if (!authenticatedAdmin || activeCall) return;
+    if (!navigator.mediaDevices?.getUserMedia || !window.RTCPeerConnection) {
+        showCallUnavailable('This browser does not support WebRTC calls.');
+        return;
+    }
+
     try {
         callStream = await navigator.mediaDevices.getUserMedia({ video: type === 'video', audio: true });
+        const callRef = db.collection('calls').doc();
+        activeCall = { id: callRef.id, ref: callRef, role: 'caller', type, name: target.name };
+        createCallPeerConnection(callRef, 'caller', type);
         document.getElementById('callVideo').srcObject = callStream;
-        document.getElementById('callModal').classList.add('active');
-        document.getElementById('callName').innerText = type === 'video' ? 'Video Call Connected' : 'Voice Call Connected';
-    } catch (err) { showBrandedNotice('Call unavailable', 'Camera and microphone access requires HTTPS or localhost, and browser permission.', 'fas fa-video-slash', 'var(--danger)'); }
+        showActiveCall(target.name, type);
+
+        const offer = await callPeerConnection.createOffer();
+        await callPeerConnection.setLocalDescription(offer);
+        await callRef.set({
+            callerId: authenticatedAdmin.uid,
+            callerName: authenticatedAdmin.displayName || adminName,
+            calleeId: target.presenceId || target.id,
+            calleeName: target.name,
+            type,
+            status: 'ringing',
+            offer: { type: offer.type, sdp: offer.sdp },
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        listenForRemoteCandidates(callRef, 'calleeCandidates');
+        activeCallListener = callRef.onSnapshot(async snapshot => {
+            const data = snapshot.data();
+            if (!data || !activeCall || activeCall.id !== snapshot.id) return;
+            if (data.answer && !callPeerConnection.currentRemoteDescription) {
+                await callPeerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+                await flushRemoteCandidates();
+                document.getElementById('callName').innerText = `${type === 'video' ? 'Video' : 'Voice'} call with ${target.name}`;
+            }
+            if (data.status === 'declined' || data.status === 'ended') endCall(false);
+        });
+    } catch (error) {
+        console.error('Could not start team call:', error);
+        endCall(false);
+        showCallUnavailable('Camera and microphone access requires HTTPS or localhost, and browser permission.');
+    }
 }
-function endCall() { if (callStream) callStream.getTracks().forEach(t => t.stop()); document.getElementById('callModal').classList.remove('active'); }
-function toggleMute() { if (callStream) callStream.getAudioTracks().forEach(t => t.enabled = !t.enabled); }
-function toggleVideo() { if (callStream) callStream.getVideoTracks().forEach(t => t.enabled = !t.enabled); }
+
+function listenForIncomingCalls() {
+    if (incomingCallListener) incomingCallListener();
+    if (!authenticatedAdmin) return;
+    incomingCallListener = db.collection('calls').where('calleeId', '==', authenticatedAdmin.uid).onSnapshot(snapshot => {
+        snapshot.docChanges().forEach(change => {
+            const data = change.doc.data();
+            if (change.type === 'added' && data.status === 'ringing' && !activeCall && !incomingCall) {
+                incomingCall = { id: change.doc.id, ref: change.doc.ref, ...data };
+                document.getElementById('incomingCallName').innerText = `${data.callerName || 'A teammate'} is calling`;
+                document.getElementById('incomingCallType').innerText = `${data.type === 'video' ? 'Video' : 'Voice'} call in Team Chat`;
+                document.getElementById('incomingCallModal').classList.add('active');
+            }
+            if (incomingCall?.id === change.doc.id && ['ended', 'declined'].includes(data.status)) {
+                incomingCall = null;
+                document.getElementById('incomingCallModal').classList.remove('active');
+            }
+        });
+    }, error => console.warn('Incoming call listener error:', error));
+}
+
+async function acceptIncomingCall() {
+    if (!incomingCall || activeCall) return;
+    const call = incomingCall;
+    incomingCall = null;
+    document.getElementById('incomingCallModal').classList.remove('active');
+    try {
+        callStream = await navigator.mediaDevices.getUserMedia({ video: call.type === 'video', audio: true });
+        activeCall = { id: call.id, ref: call.ref, role: 'callee', type: call.type, name: call.callerName || 'Teammate' };
+        createCallPeerConnection(call.ref, 'callee', call.type);
+        document.getElementById('callVideo').srcObject = callStream;
+        showActiveCall(activeCall.name, call.type);
+        await callPeerConnection.setRemoteDescription(new RTCSessionDescription(call.offer));
+        await flushRemoteCandidates();
+        listenForRemoteCandidates(call.ref, 'callerCandidates');
+        const answer = await callPeerConnection.createAnswer();
+        await callPeerConnection.setLocalDescription(answer);
+        await call.ref.update({ answer: { type: answer.type, sdp: answer.sdp }, status: 'active' });
+    } catch (error) {
+        console.error('Could not answer team call:', error);
+        await call.ref.update({ status: 'ended' }).catch(() => {});
+        endCall(false);
+        showCallUnavailable('Camera and microphone access requires HTTPS or localhost, and browser permission.');
+    }
+}
+
+function declineIncomingCall() {
+    if (!incomingCall) return;
+    incomingCall.ref.update({ status: 'declined' }).catch(error => console.warn('Could not decline call:', error));
+    incomingCall = null;
+    document.getElementById('incomingCallModal').classList.remove('active');
+}
+
+function endCall(notifyPeer = true) {
+    const call = activeCall;
+    if (notifyPeer && call) call.ref.update({ status: 'ended' }).catch(() => {});
+    if (activeCallListener) activeCallListener();
+    if (activeCandidateListener) activeCandidateListener();
+    if (callPeerConnection) callPeerConnection.close();
+    if (callStream) callStream.getTracks().forEach(track => track.stop());
+    document.getElementById('callVideo').srcObject = null;
+    document.getElementById('remoteCallVideo').srcObject = null;
+    document.getElementById('remoteCallAudio').srcObject = null;
+    document.getElementById('callModal').classList.remove('active');
+    callPeerConnection = null;
+    callStream = null;
+    activeCall = null;
+    activeCallListener = null;
+    activeCandidateListener = null;
+    pendingRemoteCandidates = [];
+}
+
+function toggleMute() {
+    if (!callStream) return;
+    callStream.getAudioTracks().forEach(track => { track.enabled = !track.enabled; });
+}
+
+function toggleVideo() {
+    if (!callStream) return;
+    callStream.getVideoTracks().forEach(track => { track.enabled = !track.enabled; });
+}
 
 
 /* =========================================================
@@ -2062,6 +2262,7 @@ firebase.auth().onAuthStateChanged(async user => {
         document.getElementById('teamPresenceName').innerText = user.displayName || adminName;
         document.getElementById('teamPresenceAvatar').innerText = initials(user.displayName || adminName);
         loadTeamChat();
+        listenForIncomingCalls();
         startPresenceHeartbeat();
         loadClientList();
         selectChat('team', 'team_general', 'general', document.querySelector('#teamChat .chat-user-item'));

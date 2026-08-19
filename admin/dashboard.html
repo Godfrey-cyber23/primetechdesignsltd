@@ -758,7 +758,11 @@
 
     <!-- === CALL MODAL === -->
     <div class="call-modal" id="callModal">
-        <div class="call-video-container"><video id="callVideo" autoplay muted></video></div>
+        <div class="call-video-container">
+            <video id="remoteCallVideo" autoplay playsinline></video>
+            <video id="callVideo" autoplay muted playsinline></video>
+            <audio id="remoteCallAudio" autoplay></audio>
+        </div>
         <div class="call-info">
             <h3 id="callName">Calling...</h3>
         </div>
@@ -766,6 +770,19 @@
             <button class="call-btn mute" onclick="toggleMute()"><i class="fas fa-microphone-slash"></i></button>
             <button class="call-btn video" onclick="toggleVideo()"><i class="fas fa-video-slash"></i></button>
             <button class="call-btn end" onclick="endCall()"><i class="fas fa-phone-slash"></i></button>
+        </div>
+    </div>
+
+    <!-- === INCOMING CALL MODAL === -->
+    <div class="call-modal" id="incomingCallModal" style="align-items: center; justify-content: center;">
+        <div class="card" style="width: 100%; max-width: 400px; text-align: center; background: var(--modal-bg);">
+            <i class="fas fa-phone-volume" style="font-size: 2.5rem; color: var(--success); margin-bottom: 15px;"></i>
+            <h3 id="incomingCallName" style="font-family: 'Space Grotesk', sans-serif; margin-bottom: 10px;">Incoming call</h3>
+            <p id="incomingCallType" style="color: var(--text-muted); margin-bottom: 25px;">Team call</p>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-danger" style="flex: 1; padding: 10px;" onclick="declineIncomingCall()"><i class="fas fa-phone-slash"></i> Decline</button>
+                <button class="btn-primary" style="flex: 1; padding: 10px;" onclick="acceptIncomingCall()"><i class="fas fa-phone"></i> Answer</button>
+            </div>
         </div>
     </div>
 
